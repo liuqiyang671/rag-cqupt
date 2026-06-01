@@ -1,19 +1,25 @@
 import { Input, List, Tag, Typography, Button, Spin, Empty, Popconfirm, message } from 'antd';
 import { SearchOutlined, HistoryOutlined } from '@ant-design/icons';
 import { useEffect, useState } from 'react';
-import { archiveRecord, deleteRecord, getQARecords } from '../api/qa';
-import type { QARecord } from '../types';
+import { archiveSession, deleteSession, getConversationSessions } from '../api/qa';
+import type { ConversationSession } from '../types';
 
 interface HistorySidebarProps {
-  onSelectRecord: (record: QARecord) => void;
+  onSelectSession: (session: ConversationSession) => void;
   onViewAll: () => void;
-  currentRecordId?: number;
+  onSessionRemoved?: (sessionId: number) => void;
+  currentSessionId?: number;
 }
 
-export function HistorySidebar({ onSelectRecord, onViewAll, currentRecordId }: HistorySidebarProps) {
-  const [records, setRecords] = useState<QARecord[]>([]);
+export function HistorySidebar({
+  onSelectSession,
+  onViewAll,
+  onSessionRemoved,
+  currentSessionId,
+}: HistorySidebarProps) {
+  const [sessions, setSessions] = useState<ConversationSession[]>([]);
   const [loading, setLoading] = useState(false);
-  const [actionRecordId, setActionRecordId] = useState<number | null>(null);
+  const [actionSessionId, setActionSessionId] = useState<number | null>(null);
   const [searchText, setSearchText] = useState('');
   const [messageApi, contextHolder] = message.useMessage();
 
@@ -24,49 +30,53 @@ export function HistorySidebar({ onSelectRecord, onViewAll, currentRecordId }: H
   async function loadRecords() {
     setLoading(true);
     try {
-      const response = await getQARecords('active', 0, 20);
-      setRecords(response.records);
+      const response = await getConversationSessions('active', 0, 20);
+      setSessions(response.sessions);
     } catch (error) {
-      console.error('Failed to load records:', error);
+      console.error('Failed to load sessions:', error);
     } finally {
       setLoading(false);
     }
   }
 
-  async function handleArchive(recordId: number) {
-    setActionRecordId(recordId);
+  async function handleArchive(sessionId: number) {
+    setActionSessionId(sessionId);
     try {
-      await archiveRecord(recordId);
-      setRecords(current => current.filter(record => record.id !== recordId));
+      await archiveSession(sessionId);
+      setSessions(current => current.filter(session => session.id !== sessionId));
+      onSessionRemoved?.(sessionId);
       messageApi.success('已归档');
     } catch (error) {
-      console.error('Failed to archive record:', error);
+      console.error('Failed to archive session:', error);
       messageApi.error('归档失败，请稍后重试');
     } finally {
-      setActionRecordId(null);
+      setActionSessionId(null);
     }
   }
 
-  async function handleDelete(recordId: number) {
-    setActionRecordId(recordId);
+  async function handleDelete(sessionId: number) {
+    setActionSessionId(sessionId);
     try {
-      await deleteRecord(recordId);
-      setRecords(current => current.filter(record => record.id !== recordId));
+      await deleteSession(sessionId);
+      setSessions(current => current.filter(session => session.id !== sessionId));
+      onSessionRemoved?.(sessionId);
       messageApi.success('已删除');
     } catch (error) {
-      console.error('Failed to delete record:', error);
+      console.error('Failed to delete session:', error);
       messageApi.error('删除失败，请稍后重试');
     } finally {
-      setActionRecordId(null);
+      setActionSessionId(null);
     }
   }
 
-  const filteredRecords = searchText
-    ? records.filter(r =>
-        r.question.toLowerCase().includes(searchText.toLowerCase()) ||
-        r.answer.toLowerCase().includes(searchText.toLowerCase())
+  const filteredSessions = searchText
+    ? sessions.filter(session =>
+        session.title.toLowerCase().includes(searchText.toLowerCase()) ||
+        (session.latest_question || '').toLowerCase().includes(searchText.toLowerCase()) ||
+        (session.latest_answer || '').toLowerCase().includes(searchText.toLowerCase()) ||
+        session.summary.toLowerCase().includes(searchText.toLowerCase())
       )
-    : records;
+    : sessions;
 
   return (
     <div className="history-sidebar">
@@ -95,7 +105,7 @@ export function HistorySidebar({ onSelectRecord, onViewAll, currentRecordId }: H
           <div className="history-sidebar-loading">
             <Spin size="small" />
           </div>
-        ) : filteredRecords.length === 0 ? (
+        ) : filteredSessions.length === 0 ? (
           <Empty
             image={Empty.PRESENTED_IMAGE_SIMPLE}
             description="暂无历史记录"
@@ -103,24 +113,27 @@ export function HistorySidebar({ onSelectRecord, onViewAll, currentRecordId }: H
           />
         ) : (
           <List
-            dataSource={filteredRecords}
+            dataSource={filteredSessions}
             size="small"
-            renderItem={record => (
+            renderItem={session => (
               <div
                 className={`history-record-item ${
-                  record.id === currentRecordId ? 'active' : ''
+                  session.id === currentSessionId ? 'active' : ''
                 }`}
-                onClick={() => onSelectRecord(record)}
+                onClick={() => onSelectSession(session)}
               >
                 <div className="history-record-question">
-                  {record.question}
+                  {session.title}
                 </div>
                 <div className="history-record-meta">
                   <Tag color="green" style={{ margin: 0 }}>
-                    {record.model_provider}
+                    {session.latest_model_provider || 'session'}
+                  </Tag>
+                  <Tag color="blue" style={{ margin: 0 }}>
+                    {session.round_count} 轮
                   </Tag>
                   <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                    {new Date(record.created_at).toLocaleDateString('zh-CN', {
+                    {new Date(session.latest_record_created_at || session.updated_at).toLocaleDateString('zh-CN', {
                       month: '2-digit',
                       day: '2-digit',
                       hour: '2-digit',
@@ -128,12 +141,17 @@ export function HistorySidebar({ onSelectRecord, onViewAll, currentRecordId }: H
                     })}
                   </Typography.Text>
                 </div>
+                {session.latest_question && (
+                  <Typography.Text className="history-record-latest" type="secondary">
+                    {session.latest_question}
+                  </Typography.Text>
+                )}
                 <div className="history-record-actions" onClick={event => event.stopPropagation()}>
                   <Button
                     type="link"
                     size="small"
-                    loading={actionRecordId === record.id}
-                    onClick={() => void handleArchive(record.id)}
+                    loading={actionSessionId === session.id}
+                    onClick={() => void handleArchive(session.id)}
                   >
                     归档
                   </Button>
@@ -143,9 +161,9 @@ export function HistorySidebar({ onSelectRecord, onViewAll, currentRecordId }: H
                     okText="删除"
                     cancelText="取消"
                     okButtonProps={{ danger: true }}
-                    onConfirm={() => void handleDelete(record.id)}
+                    onConfirm={() => void handleDelete(session.id)}
                   >
-                    <Button danger type="link" size="small" loading={actionRecordId === record.id}>
+                    <Button danger type="link" size="small" loading={actionSessionId === session.id}>
                       删除
                     </Button>
                   </Popconfirm>

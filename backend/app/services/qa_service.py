@@ -1,6 +1,6 @@
 from typing import Dict, List, Optional
 
-from sqlalchemy import select, func
+from sqlalchemy import delete, select, func, update
 from sqlalchemy.orm import Session
 
 from app.models.conversation_session import ConversationSession
@@ -74,6 +74,71 @@ def update_conversation_session_summary(
     db.commit()
     db.refresh(session)
     return session
+
+
+def list_conversation_sessions(
+    db: Session,
+    status: str = "active",
+    skip: int = 0,
+    limit: int = 50,
+) -> List[ConversationSession]:
+    statement = (
+        select(ConversationSession)
+        .where(ConversationSession.status == status)
+        .order_by(ConversationSession.updated_at.desc(), ConversationSession.id.desc())
+        .offset(skip)
+        .limit(limit)
+    )
+    return list(db.scalars(statement).all())
+
+
+def count_conversation_sessions(db: Session, status: str = "active") -> int:
+    statement = select(func.count()).select_from(ConversationSession).where(ConversationSession.status == status)
+    return db.scalar(statement) or 0
+
+
+def get_latest_session_record(db: Session, session_id: int) -> Optional[QARecord]:
+    statement = (
+        select(QARecord)
+        .where(QARecord.session_id == session_id, QARecord.status == "active")
+        .order_by(QARecord.created_at.desc(), QARecord.id.desc())
+        .limit(1)
+    )
+    return db.scalars(statement).first()
+
+
+def list_session_qa_records(
+    db: Session,
+    session_id: int,
+    status: str = "active",
+) -> List[QARecord]:
+    statement = (
+        select(QARecord)
+        .where(QARecord.session_id == session_id, QARecord.status == status)
+        .order_by(QARecord.created_at.asc(), QARecord.id.asc())
+    )
+    return list(db.scalars(statement).all())
+
+
+def archive_conversation_session(db: Session, session_id: int) -> Optional[ConversationSession]:
+    session = get_conversation_session(db, session_id)
+    if session is None:
+        return None
+    session.status = "archived"
+    db.execute(update(QARecord).where(QARecord.session_id == session_id).values(status="archived"))
+    db.commit()
+    db.refresh(session)
+    return session
+
+
+def delete_conversation_session(db: Session, session_id: int) -> bool:
+    session = get_conversation_session(db, session_id)
+    if session is None:
+        return False
+    db.execute(delete(QARecord).where(QARecord.session_id == session_id))
+    db.delete(session)
+    db.commit()
+    return True
 
 
 def get_qa_record(db: Session, record_id: int) -> Optional[QARecord]:

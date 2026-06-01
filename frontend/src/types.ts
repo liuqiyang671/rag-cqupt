@@ -110,3 +110,25 @@ export interface QARecordListResponse {
   skip: number;
   limit: number;
 }
+
+export interface ConversationSession {
+  id: number;
+  title: string;
+  summary: string;
+  round_count: number;
+  status: 'active' | 'archived';
+  latest_question?: string | null;
+  latest_answer?: string | null;
+  latest_model_provider?: string | null;
+  latest_record_id?: number | null;
+  latest_record_created_at?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ConversationSessionListResponse {
+  sessions: ConversationSession[];
+  total: number;
+  skip: number;
+  limit: number;
+}

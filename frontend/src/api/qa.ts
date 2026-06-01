@@ -1,5 +1,12 @@
 import { apiClient } from './client';
-import type { AskResponse, KnowledgeItem, QARecord, QARecordListResponse } from '../types';
+import type {
+  AskResponse,
+  ConversationSession,
+  ConversationSessionListResponse,
+  KnowledgeItem,
+  QARecord,
+  QARecordListResponse,
+} from '../types';
 
 export async function askQuestion(question: string, sessionId?: number): Promise<AskResponse> {
   const response = await apiClient.post<AskResponse>('/qa/ask', {
@@ -108,6 +115,31 @@ export async function getQARecords(
     params: { status, skip, limit }
   });
   return response.data;
+}
+
+export async function getConversationSessions(
+  status: string = 'active',
+  skip: number = 0,
+  limit: number = 20,
+): Promise<ConversationSessionListResponse> {
+  const response = await apiClient.get('/qa/sessions', {
+    params: { status, skip, limit },
+  });
+  return response.data;
+}
+
+export async function getConversationSessionRecords(sessionId: number): Promise<QARecordListResponse> {
+  const response = await apiClient.get(`/qa/sessions/${sessionId}/records`);
+  return response.data;
+}
+
+export async function archiveSession(id: number): Promise<ConversationSession> {
+  const response = await apiClient.put(`/qa/sessions/${id}/archive`);
+  return response.data;
+}
+
+export async function deleteSession(id: number): Promise<void> {
+  await apiClient.delete(`/qa/sessions/${id}`);
 }
 
 export async function getQARecord(id: number): Promise<QARecord> {

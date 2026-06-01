@@ -39,3 +39,27 @@ class QARecordListResponse(BaseModel):
     total: int
     skip: int
     limit: int
+
+
+class ConversationSessionResponse(BaseModel):
+    id: int
+    title: str
+    summary: str
+    round_count: int
+    status: str
+    latest_question: Optional[str] = None
+    latest_answer: Optional[str] = None
+    latest_model_provider: Optional[str] = None
+    latest_record_id: Optional[int] = None
+    latest_record_created_at: Optional[datetime] = None
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ConversationSessionListResponse(BaseModel):
+    sessions: List[ConversationSessionResponse]
+    total: int
+    skip: int
+    limit: int

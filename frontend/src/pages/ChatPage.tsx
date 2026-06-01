@@ -1,12 +1,12 @@
 import { Alert, Button, Card, Space, Statistic, Typography, message } from 'antd';
 import { useMemo, useRef, useState } from 'react';
-import { askQuestionStream } from '../api/qa';
+import { askQuestionStream, getConversationSessionRecords } from '../api/qa';
 import { submitFeedback } from '../api/feedback';
 import { ChatBox } from '../components/ChatBox';
 import { MessageList, type ChatMessage } from '../components/MessageList';
 import { HistorySidebar } from '../components/HistorySidebar';
 import { useNavigate } from 'react-router-dom';
-import type { QARecord } from '../types';
+import type { ConversationSession } from '../types';
 
 export function ChatPage() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -90,23 +90,31 @@ export function ChatPage() {
     messageApi.success('反馈已提交');
   }
 
-  function handleSelectRecord(record: QARecord) {
-    const userMessage: ChatMessage = {
-      id: crypto.randomUUID(),
-      role: 'user',
-      content: record.question,
-    };
-    const assistantMessage: ChatMessage = {
-      id: crypto.randomUUID(),
-      role: 'assistant',
-      content: record.answer,
-      context: record.retrieved_context,
-      modelProvider: record.model_provider,
-      qaRecordId: record.id,
-    };
-    setMessages([userMessage, assistantMessage]);
-    setSessionId(record.session_id ?? undefined);
-    setConversationSummary('');
+  async function handleSelectSession(session: ConversationSession) {
+    try {
+      const response = await getConversationSessionRecords(session.id);
+      const sessionMessages = response.records.flatMap<ChatMessage>((record) => [
+        {
+          id: crypto.randomUUID(),
+          role: 'user',
+          content: record.question,
+        },
+        {
+          id: crypto.randomUUID(),
+          role: 'assistant',
+          content: record.answer,
+          context: record.retrieved_context,
+          modelProvider: record.model_provider,
+          qaRecordId: record.id,
+        },
+      ]);
+      setMessages(sessionMessages);
+      setSessionId(session.id);
+      setConversationSummary(session.summary);
+    } catch (error) {
+      console.error('Failed to load session records:', error);
+      messageApi.error('加载会话失败，请稍后重试');
+    }
   }
 
   function handleViewAll() {
@@ -119,15 +127,21 @@ export function ChatPage() {
     setConversationSummary('');
   }
 
-  const currentRecordId = messages.find(m => m.qaRecordId)?.qaRecordId;
+  function handleSessionRemoved(removedSessionId: number) {
+    if (sessionId !== removedSessionId) {
+      return;
+    }
+    handleNewSession();
+  }
 
   return (
     <div className="page-grid chat-page">
       {contextHolder}
       <HistorySidebar
-        onSelectRecord={handleSelectRecord}
+        onSelectSession={(session) => void handleSelectSession(session)}
         onViewAll={handleViewAll}
-        currentRecordId={currentRecordId}
+        onSessionRemoved={handleSessionRemoved}
+        currentSessionId={sessionId}
       />
       <section className="workspace-panel">
         <Space direction="vertical" size={18} className="full-width">
