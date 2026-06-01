@@ -25,10 +25,16 @@ def init_db() -> None:
             text("CREATE INDEX IF NOT EXISTS ix_qa_records_status ON qa_records (status)")
         )
         connection.execute(
-            text("ALTER TABLE qa_records ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP NOT NULL DEFAULT NOW()")
+            text("ALTER TABLE qa_records ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP")
         )
         connection.execute(
             text("UPDATE qa_records SET updated_at = created_at WHERE updated_at IS NULL")
+        )
+        connection.execute(
+            text("ALTER TABLE qa_records ALTER COLUMN updated_at SET NOT NULL")
+        )
+        connection.execute(
+            text("ALTER TABLE qa_records ALTER COLUMN updated_at SET DEFAULT NOW()")
         )
     print("Database initialized with pgvector extension and application tables.")
 
