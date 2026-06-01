@@ -4,12 +4,16 @@ import { askQuestionStream } from '../api/qa';
 import { submitFeedback } from '../api/feedback';
 import { ChatBox } from '../components/ChatBox';
 import { MessageList, type ChatMessage } from '../components/MessageList';
+import { HistorySidebar } from '../components/HistorySidebar';
+import { useNavigate } from 'react-router-dom';
+import type { QARecord } from '../types';
 
 export function ChatPage() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(false);
   const [messageApi, contextHolder] = message.useMessage();
   const assistantIdRef = useRef<string>('');
+  const navigate = useNavigate();
 
   const answerCount = useMemo(
     () => messages.filter((item) => item.role === 'assistant' && item.qaRecordId && !item.streaming).length,
@@ -63,7 +67,7 @@ export function ChatPage() {
       onError(error) {
         setMessages((current) =>
           current.map((m) =>
-            m.id === assistantId ? { ...m, streaming: false } : m,
+            m.id === assistantId ? { ...m, content: error.message || '模型或 Embedding 服务不可用。', streaming: false } : m,
           ),
         );
         messageApi.error(error.message || '问答请求失败，请确认后端服务已启动。');
@@ -80,9 +84,37 @@ export function ChatPage() {
     messageApi.success('反馈已提交');
   }
 
+  function handleSelectRecord(record: QARecord) {
+    const userMessage: ChatMessage = {
+      id: crypto.randomUUID(),
+      role: 'user',
+      content: record.question,
+    };
+    const assistantMessage: ChatMessage = {
+      id: crypto.randomUUID(),
+      role: 'assistant',
+      content: record.answer,
+      context: record.retrieved_context,
+      modelProvider: record.model_provider,
+      qaRecordId: record.id,
+    };
+    setMessages([userMessage, assistantMessage]);
+  }
+
+  function handleViewAll() {
+    navigate('/history');
+  }
+
+  const currentRecordId = messages.find(m => m.qaRecordId)?.qaRecordId;
+
   return (
     <div className="page-grid chat-page">
       {contextHolder}
+      <HistorySidebar
+        onSelectRecord={handleSelectRecord}
+        onViewAll={handleViewAll}
+        currentRecordId={currentRecordId}
+      />
       <section className="workspace-panel">
         <Space direction="vertical" size={18} className="full-width">
           <div className="page-heading">
