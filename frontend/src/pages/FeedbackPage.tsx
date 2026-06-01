@@ -2,6 +2,7 @@ import { Card, List, Space, Tag, Typography, message } from 'antd';
 import { useEffect, useState } from 'react';
 import { fetchFeedback } from '../api/feedback';
 import type { FeedbackItem } from '../types';
+import { formatCampusDateTime } from '../utils/dateTime';
 
 export function FeedbackPage() {
   const [items, setItems] = useState<FeedbackItem[]>([]);
@@ -45,7 +46,7 @@ export function FeedbackPage() {
                       {item.rating === 'like' ? '点赞' : '点踩'}
                     </Tag>
                     <Typography.Text>问答记录 #{item.qa_record_id}</Typography.Text>
-                    <Typography.Text type="secondary">{new Date(item.created_at).toLocaleString()}</Typography.Text>
+                    <Typography.Text type="secondary">{formatCampusDateTime(item.created_at)}</Typography.Text>
                   </Space>
                   <Typography.Text>{item.comment || '未填写文字反馈'}</Typography.Text>
                 </Space>
@@ -57,4 +58,3 @@ export function FeedbackPage() {
     </section>
   );
 }
-

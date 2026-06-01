@@ -24,6 +24,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getQARecords, archiveRecord, restoreRecord, deleteRecord } from '../api/qa';
 import type { QARecord } from '../types';
+import { formatCampusDateTime } from '../utils/dateTime';
 
 export function HistoryPage() {
   const navigate = useNavigate();
@@ -244,7 +245,7 @@ export function HistoryPage() {
                       <Space>
                         <Tag color="green">{record.model_provider}</Tag>
                         <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                          {new Date(record.created_at).toLocaleString('zh-CN')}
+                          {formatCampusDateTime(record.created_at)}
                         </Typography.Text>
                       </Space>
                       <Space>

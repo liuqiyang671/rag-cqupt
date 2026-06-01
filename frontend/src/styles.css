@@ -41,25 +41,14 @@ body {
 }
 
 .brand {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
+  display: block;
   width: 100%;
   padding-bottom: 22px;
   border-bottom: 1px solid rgba(20, 116, 95, 0.12);
 }
 
-.brand-mark {
-  flex: 0 0 auto;
-  display: grid;
-  width: 44px;
-  height: 44px;
-  place-items: center;
-  color: #ffffff;
-  font-size: 22px;
-  font-weight: 700;
-  background: #14745f;
-  border-radius: 8px;
+.brand-copy {
+  min-width: 0;
 }
 
 .brand h4,
@@ -68,13 +57,19 @@ body {
 }
 
 .brand h4.ant-typography {
-  line-height: 1.35;
+  color: #14231f;
+  font-size: 18px;
+  line-height: 1.25;
+  white-space: nowrap;
 }
 
 .brand .ant-typography-secondary {
   display: block;
-  margin-top: 6px;
+  margin-top: 7px;
   color: #59716a;
+  font-size: 12px;
+  letter-spacing: 0;
+  white-space: nowrap;
 }
 
 .main-nav {
@@ -564,7 +559,6 @@ body {
   }
 
   .brand {
-    align-items: center;
     min-width: 0;
     padding-bottom: 0;
     border-bottom: 0;
@@ -572,6 +566,7 @@ body {
 
   .brand h4.ant-typography {
     font-size: 16px;
+    white-space: normal;
   }
 
   .brand .ant-typography-secondary {

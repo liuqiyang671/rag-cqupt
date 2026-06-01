@@ -197,12 +197,24 @@ class RAGService:
         llm_client: LLMClient,
         model_provider: str,
         top_k: int,
+        enable_query_rewriting: bool = True,
     ):
         self.db = db
         self.embedding_client = embedding_client
         self.llm_client = llm_client
         self.model_provider = model_provider
         self.top_k = top_k
+        self.enable_query_rewriting = enable_query_rewriting
+
+        # 初始化问题重写器
+        if enable_query_rewriting:
+            from app.services.query_rewriting import QueryRewriter, MultiQueryRetriever
+            self.query_rewriter = QueryRewriter(llm_client, max_queries=3)
+            self.multi_query_retriever = MultiQueryRetriever(
+                db=db,
+                embedding_client=embedding_client,
+                top_k=top_k,
+            )
 
     async def summarize_session(self, previous_summary: str, question: str, answer: str) -> str:
         fallback = fallback_conversation_summary(previous_summary, question, answer)
@@ -242,8 +254,13 @@ class RAGService:
                 "conversation_summary": conversation.summary,
             }
 
-        query_embedding = await self.embedding_client.embed(question)
-        context_items = retrieve_hybrid_knowledge(self.db, question, query_embedding, self.top_k)
+        # 问题重写 + 多查询检索
+        if self.enable_query_rewriting:
+            queries = await self.query_rewriter.rewrite_query(question)
+            context_items = await self.multi_query_retriever.retrieve(queries)
+        else:
+            query_embedding = await self.embedding_client.embed(question)
+            context_items = retrieve_hybrid_knowledge(self.db, question, query_embedding, self.top_k)
         prompt = build_prompt(
             question=question,
             context_items=context_items,
@@ -312,9 +329,13 @@ class RAGService:
                 yield f"data: {json.dumps(done, ensure_ascii=False)}\n\n"
                 return
 
-            # 1. Retrieve relevant knowledge
-            query_embedding = await self.embedding_client.embed(question)
-            context_items = retrieve_hybrid_knowledge(self.db, question, query_embedding, self.top_k)
+            # 1. Retrieve relevant knowledge (with query rewriting if enabled)
+            if self.enable_query_rewriting:
+                queries = await self.query_rewriter.rewrite_query(question)
+                context_items = await self.multi_query_retriever.retrieve(queries)
+            else:
+                query_embedding = await self.embedding_client.embed(question)
+                context_items = retrieve_hybrid_knowledge(self.db, question, query_embedding, self.top_k)
 
             # 2. Send metadata event
             metadata = {

@@ -3,6 +3,7 @@ import { SearchOutlined, HistoryOutlined } from '@ant-design/icons';
 import { useEffect, useState } from 'react';
 import { archiveSession, deleteSession, getConversationSessions } from '../api/qa';
 import type { ConversationSession } from '../types';
+import { formatCampusDateTime } from '../utils/dateTime';
 
 interface HistorySidebarProps {
   onSelectSession: (session: ConversationSession) => void;
@@ -133,11 +134,11 @@ export function HistorySidebar({
                     {session.round_count} 轮
                   </Tag>
                   <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                    {new Date(session.latest_record_created_at || session.updated_at).toLocaleDateString('zh-CN', {
+                    {formatCampusDateTime(session.latest_record_created_at || session.updated_at, {
                       month: '2-digit',
                       day: '2-digit',
                       hour: '2-digit',
-                      minute: '2-digit'
+                      minute: '2-digit',
                     })}
                   </Typography.Text>
                 </div>

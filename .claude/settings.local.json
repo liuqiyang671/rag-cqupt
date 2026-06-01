@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -m pytest tests/test_query_rewriting.py -v)",
+      "Bash(.venv/Scripts/python -m pytest tests/test_query_rewriting.py -v)",
+      "Bash(.venv/Scripts/pip install *)"
+    ]
+  }
+}

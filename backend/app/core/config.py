@@ -37,6 +37,10 @@ class Settings(BaseSettings):
         alias="FRONTEND_ORIGINS",
     )
 
+    # 问题重写配置
+    enable_query_rewriting: bool = Field(default=True, alias="ENABLE_QUERY_REWRITING")
+    query_rewriting_max_queries: int = Field(default=3, alias="QUERY_REWRITING_MAX_QUERIES")
+
     model_config = SettingsConfigDict(
         env_file=(".env", "backend/.env"),
         env_file_encoding="utf-8",

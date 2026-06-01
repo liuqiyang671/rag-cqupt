@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from sqlalchemy import DateTime, ForeignKey, Integer, String, JSON, Text
 from sqlalchemy.orm import Mapped, mapped_column
@@ -17,7 +17,7 @@ class QARecord(Base):
     __tablename__ = "qa_records"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    session_id: Mapped[int | None] = mapped_column(
+    session_id: Mapped[Optional[int]] = mapped_column(
         ForeignKey("conversation_sessions.id", ondelete="SET NULL"),
         nullable=True,
         index=True,

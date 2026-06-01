@@ -84,8 +84,7 @@ function AppShell() {
     <Layout className="app-shell">
       <Sider className="app-sidebar" width={256}>
         <div className="brand">
-          <div className="brand-mark">校</div>
-          <div>
+          <div className="brand-copy">
             <Typography.Title level={4}>高校校园服务智能问答系统</Typography.Title>
             <Typography.Text>Campus Service RAG Assistant</Typography.Text>
           </div>
