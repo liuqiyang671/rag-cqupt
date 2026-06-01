@@ -37,7 +37,7 @@ async def ask(
         top_k=settings.top_k,
     )
     try:
-        return await service.ask(payload.question)
+        return await service.ask(payload.question, session_id=payload.session_id)
     except AIServiceError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
@@ -56,7 +56,7 @@ async def ask_stream(
         top_k=settings.top_k,
     )
     return StreamingResponse(
-        service.ask_stream(payload.question),
+        service.ask_stream(payload.question, session_id=payload.session_id),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",

@@ -1,21 +1,30 @@
 import { apiClient } from './client';
 import type { AskResponse, KnowledgeItem, QARecord, QARecordListResponse } from '../types';
 
-export async function askQuestion(question: string): Promise<AskResponse> {
-  const response = await apiClient.post<AskResponse>('/qa/ask', { question });
+export async function askQuestion(question: string, sessionId?: number): Promise<AskResponse> {
+  const response = await apiClient.post<AskResponse>('/qa/ask', {
+    question,
+    ...(sessionId ? { session_id: sessionId } : {}),
+  });
   return response.data;
 }
 
 export interface StreamCallbacks {
-  onMetadata: (data: { retrieved_context: KnowledgeItem[]; model_provider: string }) => void;
+  onMetadata: (data: {
+    retrieved_context: KnowledgeItem[];
+    model_provider: string;
+    session_id: number;
+    conversation_summary: string;
+  }) => void;
   onChunk: (content: string) => void;
-  onDone: (data: { qa_record_id: number }) => void;
+  onDone: (data: { qa_record_id: number; session_id: number; conversation_summary: string }) => void;
   onError: (error: Error) => void;
 }
 
 export async function askQuestionStream(
   question: string,
   callbacks: StreamCallbacks,
+  sessionId?: number,
 ): Promise<void> {
   const baseURL = import.meta.env.VITE_API_BASE_URL ?? '/api';
   const token = localStorage.getItem('token');
@@ -27,7 +36,10 @@ export async function askQuestionStream(
         'Content-Type': 'application/json',
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
-      body: JSON.stringify({ question }),
+      body: JSON.stringify({
+        question,
+        ...(sessionId ? { session_id: sessionId } : {}),
+      }),
     });
     if (!response.ok) {
       throw new Error(await getStreamErrorMessage(response));

@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import Settings, get_settings
 from app.core.database import SessionLocal
-from app.models import Feedback, KnowledgeBase, QARecord, User
+from app.models import ConversationSession, Feedback, KnowledgeBase, QARecord, User
 from app.services.embedding.factory import get_embedding_client
 from app.scripts.seed_knowledge import seed_knowledge_items
 
@@ -46,9 +46,14 @@ def clear_application_data(db: Session) -> None:
     try:
         bind = db.get_bind()
         if bind.dialect.name == "postgresql":
-            db.execute(text("TRUNCATE TABLE feedback, qa_records, knowledge_base, users RESTART IDENTITY CASCADE"))
+            db.execute(
+                text(
+                    "TRUNCATE TABLE feedback, qa_records, conversation_sessions, "
+                    "knowledge_base, users RESTART IDENTITY CASCADE"
+                )
+            )
         else:
-            for model in (Feedback, QARecord, KnowledgeBase, User):
+            for model in (Feedback, QARecord, ConversationSession, KnowledgeBase, User):
                 db.execute(delete(model))
         db.commit()
     except Exception:

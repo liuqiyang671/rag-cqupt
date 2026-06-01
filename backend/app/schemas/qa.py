@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -8,6 +8,7 @@ from app.schemas.knowledge import RetrievedKnowledge
 
 class AskRequest(BaseModel):
     question: str = Field(..., min_length=1)
+    session_id: Optional[int] = None
 
 
 class AskResponse(BaseModel):
@@ -15,10 +16,13 @@ class AskResponse(BaseModel):
     qa_record_id: int
     retrieved_context: List[RetrievedKnowledge]
     model_provider: str
+    session_id: int
+    conversation_summary: str
 
 
 class QARecordResponse(BaseModel):
     id: int
+    session_id: Optional[int] = None
     question: str
     answer: str
     retrieved_context: List[Dict]
@@ -35,4 +39,3 @@ class QARecordListResponse(BaseModel):
     total: int
     skip: int
     limit: int
-

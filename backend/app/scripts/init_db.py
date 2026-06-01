@@ -3,7 +3,7 @@ from sqlalchemy import text
 from app.core.ai_errors import VectorSchemaError
 from app.core.config import get_settings
 from app.core.database import Base, engine
-from app.models import Feedback, KnowledgeBase, QARecord, User  # noqa: F401
+from app.models import ConversationSession, Feedback, KnowledgeBase, QARecord, User  # noqa: F401
 from app.services.vector_schema import ensure_knowledge_embedding_dimension
 
 
@@ -22,6 +22,12 @@ def init_db() -> None:
             text("CREATE INDEX IF NOT EXISTS ix_knowledge_base_document_name ON knowledge_base (document_name)")
         )
         # 新增 qa_records 表的 status 和 updated_at 字段
+        connection.execute(
+            text("ALTER TABLE qa_records ADD COLUMN IF NOT EXISTS session_id INTEGER")
+        )
+        connection.execute(
+            text("CREATE INDEX IF NOT EXISTS ix_qa_records_session_id ON qa_records (session_id)")
+        )
         connection.execute(
             text("ALTER TABLE qa_records ADD COLUMN IF NOT EXISTS status VARCHAR(20) NOT NULL DEFAULT 'active'")
         )

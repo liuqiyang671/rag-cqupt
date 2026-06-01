@@ -7,7 +7,12 @@ from sqlalchemy.orm import Session
 from app.core.ai_errors import AIServiceError
 from app.services.embedding.base import EmbeddingClient
 from app.services.llm.base import LLMClient
-from app.services.qa_service import create_qa_record
+from app.services.qa_service import (
+    create_qa_record,
+    get_or_create_conversation_session,
+    list_recent_session_records,
+    update_conversation_session_summary,
+)
 from app.services.retrieval_service import retrieve_hybrid_knowledge
 
 
@@ -48,9 +53,26 @@ CASUAL_PRAISE = {
     "666", "nb", "yyds", "可以的", "行",
 }
 CASUAL_PUNCTUATION_RE = re.compile(r"[\s,，。.!！?？~～、]+")
+REFERENCE_SOURCE_RE = re.compile(r"引用来源[:：]")
+MAX_SUMMARY_LENGTH = 500
+SUMMARY_RESPONSE_LIMIT = 160
 
 
-def build_prompt(question: str, context_items: List[Dict]) -> str:
+def format_recent_turns(recent_turns: List[Dict]) -> str:
+    if not recent_turns:
+        return "暂无历史对话。"
+    return "\n".join(
+        f"{index}. 用户：{item['question']}\n   助手：{item['answer']}"
+        for index, item in enumerate(recent_turns, start=1)
+    )
+
+
+def build_prompt(
+    question: str,
+    context_items: List[Dict],
+    conversation_summary: str = "",
+    recent_turns: Optional[List[Dict]] = None,
+) -> str:
     if context_items:
         context = "\n\n".join(
             (
@@ -64,6 +86,9 @@ def build_prompt(question: str, context_items: List[Dict]) -> str:
     else:
         context = "未检索到相关知识。"
 
+    summary = conversation_summary.strip() or "暂无会话摘要。"
+    recent_context = format_recent_turns(recent_turns or [])
+
     return f"""你是高校校园服务智能问答助手。
 你的任务是根据提供的校园知识库内容，回答学生、教师或工作人员的问题。
 
@@ -76,12 +101,18 @@ def build_prompt(question: str, context_items: List[Dict]) -> str:
 6. 回答末尾可以提示用户联系相关部门确认最新信息。
 7. 回答控制在 300 字以内，不要展开与问题无关的知识。
 8. 使用引用编号标注依据，例如“需要先挂失[1]”。
-9. 回答末尾列出引用来源，格式为“引用来源：[1] 标题 - 来源”。
+9. 回答末尾列出引用来源，格式为“引用来源：[1] 标题 - 来源”，且“引用来源”前必须空一行。
+
+会话摘要：
+{summary}
+
+最近 3 轮对话：
+{recent_context}
 
 知识库内容：
 {context}
 
-用户问题：
+当前问题：
 {question}
 
 请生成回答："""
@@ -89,6 +120,52 @@ def build_prompt(question: str, context_items: List[Dict]) -> str:
 
 def normalize_casual_message(question: str) -> str:
     return CASUAL_PUNCTUATION_RE.sub("", question.strip().lower())
+
+
+def normalize_answer_references(answer: str) -> str:
+    """Ensure the final reference source list starts as a separate paragraph."""
+    match = REFERENCE_SOURCE_RE.search(answer)
+    if not match:
+        return answer
+
+    prefix = answer[: match.start()].rstrip()
+    suffix = answer[match.start() :].lstrip()
+    if not prefix:
+        return suffix
+    return f"{prefix}\n\n{suffix}"
+
+
+def records_to_recent_turns(records: List) -> List[Dict]:
+    return [{"question": record.question, "answer": record.answer} for record in records]
+
+
+def fallback_conversation_summary(previous_summary: str, question: str, answer: str) -> str:
+    parts = []
+    if previous_summary.strip():
+        parts.append(previous_summary.strip())
+    parts.append(f"用户问：{question.strip()}")
+    parts.append(f"助手答：{answer.strip()}")
+    summary = "；".join(parts)
+    summary = re.sub(r"\s+", " ", summary).strip()
+    return summary[:MAX_SUMMARY_LENGTH]
+
+
+def build_summary_prompt(previous_summary: str, question: str, answer: str) -> str:
+    return f"""请更新这段校园问答多轮会话摘要。
+要求：
+1. 只保留用户持续关注的事项、已确认的信息和待解决问题。
+2. 不要罗列完整对话。
+3. 控制在 {SUMMARY_RESPONSE_LIMIT} 字以内。
+4. 只输出摘要文本。
+
+旧摘要：
+{previous_summary or "暂无"}
+
+最新一轮：
+用户：{question}
+助手：{answer}
+
+更新后的会话摘要："""
 
 
 def build_casual_answer(question: str) -> Optional[str]:
@@ -127,7 +204,23 @@ class RAGService:
         self.model_provider = model_provider
         self.top_k = top_k
 
-    async def ask(self, question: str) -> Dict:
+    async def summarize_session(self, previous_summary: str, question: str, answer: str) -> str:
+        fallback = fallback_conversation_summary(previous_summary, question, answer)
+        try:
+            summary = await self.llm_client.chat(
+                [
+                    {"role": "system", "content": SYSTEM_PROMPT},
+                    {"role": "user", "content": build_summary_prompt(previous_summary, question, answer)},
+                ]
+            )
+        except AIServiceError:
+            return fallback
+        summary = re.sub(r"\s+", " ", summary).strip()
+        return (summary or fallback)[:MAX_SUMMARY_LENGTH]
+
+    async def ask(self, question: str, session_id: Optional[int] = None) -> Dict:
+        conversation = get_or_create_conversation_session(self.db, session_id, question)
+        recent_turns = records_to_recent_turns(list_recent_session_records(self.db, conversation.id, limit=3))
         casual_answer = build_casual_answer(question)
         if casual_answer is not None:
             record = create_qa_record(
@@ -136,46 +229,66 @@ class RAGService:
                 answer=casual_answer,
                 retrieved_context=[],
                 model_provider=DIRECT_RESPONSE_PROVIDER,
+                session_id=conversation.id,
             )
+            summary = fallback_conversation_summary(conversation.summary, question, casual_answer)
+            conversation = update_conversation_session_summary(self.db, conversation, summary)
             return {
                 "answer": casual_answer,
                 "qa_record_id": record.id,
                 "retrieved_context": [],
                 "model_provider": DIRECT_RESPONSE_PROVIDER,
+                "session_id": conversation.id,
+                "conversation_summary": conversation.summary,
             }
 
         query_embedding = await self.embedding_client.embed(question)
         context_items = retrieve_hybrid_knowledge(self.db, question, query_embedding, self.top_k)
-        prompt = build_prompt(question=question, context_items=context_items)
+        prompt = build_prompt(
+            question=question,
+            context_items=context_items,
+            conversation_summary=conversation.summary,
+            recent_turns=recent_turns,
+        )
         answer = await self.llm_client.chat(
             [
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": prompt},
             ]
         )
+        answer = normalize_answer_references(answer)
         record = create_qa_record(
             self.db,
             question=question,
             answer=answer,
             retrieved_context=context_items,
             model_provider=self.model_provider,
+            session_id=conversation.id,
         )
+        summary = await self.summarize_session(conversation.summary, question, answer)
+        conversation = update_conversation_session_summary(self.db, conversation, summary)
         return {
             "answer": answer,
             "qa_record_id": record.id,
             "retrieved_context": context_items,
             "model_provider": self.model_provider,
+            "session_id": conversation.id,
+            "conversation_summary": conversation.summary,
         }
 
-    async def ask_stream(self, question: str) -> AsyncGenerator[str, None]:
+    async def ask_stream(self, question: str, session_id: Optional[int] = None) -> AsyncGenerator[str, None]:
         """Stream the RAG answer as SSE events."""
         try:
+            conversation = get_or_create_conversation_session(self.db, session_id, question)
+            recent_turns = records_to_recent_turns(list_recent_session_records(self.db, conversation.id, limit=3))
             casual_answer = build_casual_answer(question)
             if casual_answer is not None:
                 metadata = {
                     "type": "metadata",
                     "retrieved_context": [],
                     "model_provider": DIRECT_RESPONSE_PROVIDER,
+                    "session_id": conversation.id,
+                    "conversation_summary": conversation.summary,
                 }
                 yield f"data: {json.dumps(metadata, ensure_ascii=False)}\n\n"
                 event = {"type": "chunk", "content": casual_answer}
@@ -186,8 +299,16 @@ class RAGService:
                     answer=casual_answer,
                     retrieved_context=[],
                     model_provider=DIRECT_RESPONSE_PROVIDER,
+                    session_id=conversation.id,
                 )
-                done = {"type": "done", "qa_record_id": record.id}
+                summary = fallback_conversation_summary(conversation.summary, question, casual_answer)
+                conversation = update_conversation_session_summary(self.db, conversation, summary)
+                done = {
+                    "type": "done",
+                    "qa_record_id": record.id,
+                    "session_id": conversation.id,
+                    "conversation_summary": conversation.summary,
+                }
                 yield f"data: {json.dumps(done, ensure_ascii=False)}\n\n"
                 return
 
@@ -200,11 +321,18 @@ class RAGService:
                 "type": "metadata",
                 "retrieved_context": context_items,
                 "model_provider": self.model_provider,
+                "session_id": conversation.id,
+                "conversation_summary": conversation.summary,
             }
             yield f"data: {json.dumps(metadata, ensure_ascii=False)}\n\n"
 
             # 3. Stream LLM answer
-            prompt = build_prompt(question=question, context_items=context_items)
+            prompt = build_prompt(
+                question=question,
+                context_items=context_items,
+                conversation_summary=conversation.summary,
+                recent_turns=recent_turns,
+            )
             messages = [
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": prompt},
@@ -216,17 +344,25 @@ class RAGService:
                 yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
 
             # 4. Save QA record
-            answer_text = "".join(full_answer)
+            answer_text = normalize_answer_references("".join(full_answer))
             record = create_qa_record(
                 self.db,
                 question=question,
                 answer=answer_text,
                 retrieved_context=context_items,
                 model_provider=self.model_provider,
+                session_id=conversation.id,
             )
+            summary = await self.summarize_session(conversation.summary, question, answer_text)
+            conversation = update_conversation_session_summary(self.db, conversation, summary)
 
             # 5. Send done event
-            done = {"type": "done", "qa_record_id": record.id}
+            done = {
+                "type": "done",
+                "qa_record_id": record.id,
+                "session_id": conversation.id,
+                "conversation_summary": conversation.summary,
+            }
             yield f"data: {json.dumps(done, ensure_ascii=False)}\n\n"
         except AIServiceError as exc:
             event = {"type": "error", "message": str(exc)}

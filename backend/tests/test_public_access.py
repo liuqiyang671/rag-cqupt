@@ -9,10 +9,10 @@ class FakeRAGService:
     def __init__(self, **_kwargs):
         pass
 
-    async def ask_stream(self, _question: str):
-        yield 'data: {"type":"metadata","retrieved_context":[],"model_provider":"mock"}\n\n'
+    async def ask_stream(self, _question: str, session_id: int | None = None):
+        yield 'data: {"type":"metadata","retrieved_context":[],"model_provider":"mock","session_id":1,"conversation_summary":""}\n\n'
         yield 'data: {"type":"chunk","content":"公开回答"}\n\n'
-        yield 'data: {"type":"done","qa_record_id":1}\n\n'
+        yield 'data: {"type":"done","qa_record_id":1,"session_id":1,"conversation_summary":"摘要"}\n\n'
 
 
 def test_stream_qa_allows_public_access_without_token(monkeypatch):

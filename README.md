@@ -19,8 +19,10 @@ flowchart LR
   Frontend --> API["FastAPI /api/qa/ask"]
   API --> Embed["Embedding Client"]
   Embed --> PG["PostgreSQL + pgvector"]
-  PG --> Context["Top-K 校园知识"]
+  PG --> Context["混合检索 + 重排序"]
+  API --> Session["会话摘要 + 最近 3 轮"]
   Context --> Prompt["RAG Prompt"]
+  Session --> Prompt
   Prompt --> LLM["Local 或 SiliconFlow LLM"]
   LLM --> Record["保存问答记录"]
   Record --> Frontend
@@ -199,6 +201,28 @@ MODEL_PROVIDER=mock
 EMBEDDING_PROVIDER=mock
 ```
 
+## RAG 检索质量
+
+问答接口不再只做简单向量 Top-K，而是走一套面向校园服务场景的混合检索流程：
+
+- 意图分类：根据问题关键词识别教务、宿舍、校园卡、图书馆、网络等校园服务分类，优先检索对应知识库。
+- 向量召回：使用当前 `EMBEDDING_PROVIDER` 生成问题向量，通过 PostgreSQL + pgvector 做语义相似度检索。
+- 关键词召回：同时根据标题、分类、正文、来源做关键词匹配，补足短问题、口语问题和专有名词场景。
+- 重排序：综合向量相似度、关键词命中和分类匹配重新打分，返回更贴近问题的知识片段。
+- 低相关过滤：无分类、无关键词、语义相似度也偏低的问题会返回无上下文，让模型按闲聊或无法确认处理，避免把无关知识硬塞进回答。
+- 引用来源：传给模型的上下文带有 `[1]`、`[2]` 等引用编号，前端也会展示相关度和命中原因，方便检查答案依据。
+
+## 多轮会话上下文
+
+问答接口支持自动创建和延续会话。第一轮问题不传 `session_id`，后端会创建会话并返回 `session_id`；后续请求带上该 `session_id`，系统会把以下内容一起放入模型提示词：
+
+- 会话摘要：保存该会话已经讨论过的关键事项，避免长对话无限塞入 prompt。
+- 最近 3 轮对话：按时间顺序取该会话最近 3 条问答记录。
+- 当前问题：用户本轮输入的问题。
+- 知识库内容：针对当前问题从校园知识库混合检索得到的片段。
+
+每轮回答保存后，系统会更新会话摘要。前端聊天页会自动保存当前 `session_id`，点击“新会话”会清空当前上下文并重新开始。
+
 ## API 接口
 
 ### 问答
@@ -207,9 +231,12 @@ EMBEDDING_PROVIDER=mock
 
 ```json
 {
-  "question": "校园卡丢了怎么办？"
+  "question": "校园卡丢了怎么办？",
+  "session_id": 1
 }
 ```
+
+`session_id` 可选；不传时自动创建新会话。
 
 响应：
 
@@ -217,13 +244,18 @@ EMBEDDING_PROVIDER=mock
 {
   "answer": "根据知识库生成的回答",
   "qa_record_id": 1,
+  "session_id": 1,
+  "conversation_summary": "用户正在咨询校园卡挂失、补办和后续处理流程。",
   "retrieved_context": [
     {
       "id": 1,
       "title": "校园卡挂失流程",
       "category": "校园卡服务",
       "content": "校园卡丢失后...",
-      "source": "校园卡服务中心"
+      "source": "校园卡服务中心",
+      "citation_index": 1,
+      "relevance_score": 0.92,
+      "match_reason": "分类匹配、关键词命中、语义相似"
     }
   ],
   "model_provider": "local"

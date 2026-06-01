@@ -2,6 +2,7 @@ import { Button, Card, Empty, List, Space, Tag, Typography } from 'antd';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import type { KnowledgeItem } from '../types';
+import { normalizeReferenceSection } from '../utils/answerFormatting';
 
 export interface ChatMessage {
   id: string;
@@ -46,7 +47,7 @@ export function MessageList({ messages, onFeedback }: MessageListProps) {
               {message.role === 'assistant' ? (
                 <div className="message-text markdown-body">
                   <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                    {message.content}
+                    {normalizeReferenceSection(message.content)}
                   </ReactMarkdown>
                   {message.streaming && <span className="streaming-cursor" />}
                 </div>

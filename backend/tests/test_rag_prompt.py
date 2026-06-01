@@ -7,7 +7,12 @@ from sqlalchemy.orm import sessionmaker
 from app.core.ai_errors import EmbeddingProviderError
 from app.core.database import Base
 from app.models import Feedback, KnowledgeBase, QARecord, User  # noqa: F401
-from app.services.rag_service import RAGService, build_casual_answer, build_prompt
+from app.services.rag_service import (
+    RAGService,
+    build_casual_answer,
+    build_prompt,
+    normalize_answer_references,
+)
 
 
 class ExplodingEmbeddingClient:
@@ -59,6 +64,22 @@ def test_build_casual_answer_handles_greeting_without_rag_template():
 
 def test_build_casual_answer_does_not_match_service_question():
     assert build_casual_answer("校园卡丢了怎么办？") is None
+
+
+def test_normalize_answer_references_starts_reference_source_as_new_paragraph():
+    answer = "4. 遇到问题：发现条码异常应立即告知服务台[2]。引用来源：[1] 文献传递 - 图书馆服务指南"
+
+    normalized = normalize_answer_references(answer)
+
+    assert normalized == "4. 遇到问题：发现条码异常应立即告知服务台[2]。\n\n引用来源：[1] 文献传递 - 图书馆服务指南"
+
+
+def test_normalize_answer_references_keeps_existing_reference_paragraph():
+    answer = "正文内容。\n\n引用来源：[1] 文献传递 - 图书馆服务指南"
+
+    normalized = normalize_answer_references(answer)
+
+    assert normalized == answer
 
 
 def test_rag_service_answers_casual_greeting_without_retrieval_or_llm(tmp_path):

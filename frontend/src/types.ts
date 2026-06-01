@@ -51,6 +51,8 @@ export interface AskResponse {
   qa_record_id: number;
   retrieved_context: KnowledgeItem[];
   model_provider: string;
+  session_id: number;
+  conversation_summary: string;
 }
 
 export interface FeedbackPayload {
@@ -92,6 +94,7 @@ export interface AuthResponse {
 
 export interface QARecord {
   id: number;
+  session_id?: number | null;
   question: string;
   answer: string;
   retrieved_context: KnowledgeItem[];

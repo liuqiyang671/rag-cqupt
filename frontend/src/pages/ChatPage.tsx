@@ -1,4 +1,4 @@
-import { Alert, Card, Space, Statistic, Typography, message } from 'antd';
+import { Alert, Button, Card, Space, Statistic, Typography, message } from 'antd';
 import { useMemo, useRef, useState } from 'react';
 import { askQuestionStream } from '../api/qa';
 import { submitFeedback } from '../api/feedback';
@@ -11,6 +11,8 @@ import type { QARecord } from '../types';
 export function ChatPage() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(false);
+  const [sessionId, setSessionId] = useState<number | undefined>();
+  const [conversationSummary, setConversationSummary] = useState('');
   const [messageApi, contextHolder] = message.useMessage();
   const assistantIdRef = useRef<string>('');
   const navigate = useNavigate();
@@ -39,6 +41,8 @@ export function ChatPage() {
 
     await askQuestionStream(question, {
       onMetadata(data) {
+        setSessionId(data.session_id);
+        setConversationSummary(data.conversation_summary);
         setMessages((current) =>
           current.map((m) =>
             m.id === assistantId
@@ -55,6 +59,8 @@ export function ChatPage() {
         );
       },
       onDone(data) {
+        setSessionId(data.session_id);
+        setConversationSummary(data.conversation_summary);
         setMessages((current) =>
           current.map((m) =>
             m.id === assistantId
@@ -73,7 +79,7 @@ export function ChatPage() {
         messageApi.error(error.message || '问答请求失败，请确认后端服务已启动。');
         setLoading(false);
       },
-    });
+    }, sessionId);
   }
 
   async function handleFeedback(qaRecordId: number, rating: 'like' | 'dislike') {
@@ -99,10 +105,18 @@ export function ChatPage() {
       qaRecordId: record.id,
     };
     setMessages([userMessage, assistantMessage]);
+    setSessionId(record.session_id ?? undefined);
+    setConversationSummary('');
   }
 
   function handleViewAll() {
     navigate('/history');
+  }
+
+  function handleNewSession() {
+    setMessages([]);
+    setSessionId(undefined);
+    setConversationSummary('');
   }
 
   const currentRecordId = messages.find(m => m.qaRecordId)?.qaRecordId;
@@ -122,7 +136,13 @@ export function ChatPage() {
               <Typography.Title level={2}>高校校园服务智能问答系统</Typography.Title>
               <Typography.Text type="secondary">先检索校园知识库，再生成可追溯回答。</Typography.Text>
             </div>
-            <Statistic title="本轮回答" value={answerCount} suffix="条" />
+            <Space>
+              {sessionId && <Statistic title="当前会话" value={sessionId} prefix="#" />}
+              <Statistic title="本轮回答" value={answerCount} suffix="条" />
+              <Button onClick={handleNewSession} disabled={loading}>
+                新会话
+              </Button>
+            </Space>
           </div>
           <Alert
             showIcon
@@ -139,6 +159,11 @@ export function ChatPage() {
             <Typography.Text>优先依据知识库回答。</Typography.Text>
             <Typography.Text>缺少依据时明确说明，不编造。</Typography.Text>
             <Typography.Text>地点、时间、电话、网址按来源原样引用。</Typography.Text>
+            {conversationSummary && (
+              <Typography.Text type="secondary">
+                会话摘要：{conversationSummary}
+              </Typography.Text>
+            )}
           </Space>
         </Card>
       </aside>
