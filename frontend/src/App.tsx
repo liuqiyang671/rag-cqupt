@@ -1,7 +1,7 @@
-import { ConfigProvider, Layout, Menu, Typography, Button } from 'antd';
+import { ConfigProvider, Layout, Menu, Typography, Button, Spin } from 'antd';
 import zhCN from 'antd/locale/zh_CN';
 import { useEffect, useState } from 'react';
-import { BrowserRouter, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
+import { BrowserRouter, Route, Routes, useLocation, useNavigate, Navigate } from 'react-router-dom';
 import { getMe } from './api/auth';
 import { ChatPage } from './pages/ChatPage';
 import { FeedbackPage } from './pages/FeedbackPage';
@@ -12,34 +12,71 @@ import type { User } from './types';
 
 const { Sider, Content } = Layout;
 
+// 受保护的路由组件
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const token = localStorage.getItem('token');
+
+  if (!token) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return <>{children}</>;
+}
+
 function AppShell() {
   const location = useLocation();
   const navigate = useNavigate();
   const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (token) {
+      setLoading(true);
       getMe()
         .then(setUser)
         .catch(() => {
           localStorage.removeItem('token');
           setUser(null);
+        })
+        .finally(() => {
+          setLoading(false);
         });
+    } else {
+      setLoading(false);
     }
   }, [location.pathname]);
 
   function handleLogout() {
     localStorage.removeItem('token');
     setUser(null);
-    navigate('/');
+    navigate('/login');
   }
 
+  // 登录页面不需要认证
   if (location.pathname === '/login') {
+    // 如果已登录，跳转到首页
+    if (localStorage.getItem('token') && user) {
+      return <Navigate to="/" replace />;
+    }
     return (
       <Routes>
         <Route path="/login" element={<LoginPage />} />
       </Routes>
+    );
+  }
+
+  // 未登录时跳转到登录页面
+  if (!loading && !localStorage.getItem('token')) {
+    return <Navigate to="/login" replace />;
+  }
+
+  // 加载中显示 loading
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <Spin size="large" tip="加载中..." />
+      </div>
     );
   }
 
@@ -67,24 +104,18 @@ function AppShell() {
         />
         <div className="user-info">
           <Typography.Text type="secondary">当前用户</Typography.Text>
-          <Typography.Text strong>{user ? user.nickname || user.username : '访客模式'}</Typography.Text>
-          {user ? (
-            <Button block size="small" onClick={handleLogout}>
-              登出
-            </Button>
-          ) : (
-            <Button block size="small" onClick={() => navigate('/login')}>
-              登录
-            </Button>
-          )}
+          <Typography.Text strong>{user ? user.nickname || user.username : '加载中...'}</Typography.Text>
+          <Button block size="small" onClick={handleLogout}>
+            登出
+          </Button>
         </div>
       </Sider>
       <Content className="app-content">
         <Routes>
-          <Route path="/" element={<ChatPage />} />
-          <Route path="/knowledge" element={<KnowledgePage />} />
-          <Route path="/history" element={<HistoryPage />} />
-          <Route path="/feedback" element={<FeedbackPage />} />
+          <Route path="/" element={<ProtectedRoute><ChatPage /></ProtectedRoute>} />
+          <Route path="/knowledge" element={<ProtectedRoute><KnowledgePage /></ProtectedRoute>} />
+          <Route path="/history" element={<ProtectedRoute><HistoryPage /></ProtectedRoute>} />
+          <Route path="/feedback" element={<ProtectedRoute><FeedbackPage /></ProtectedRoute>} />
         </Routes>
       </Content>
     </Layout>
