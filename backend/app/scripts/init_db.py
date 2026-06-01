@@ -17,6 +17,19 @@ def init_db() -> None:
         connection.execute(
             text("CREATE INDEX IF NOT EXISTS ix_knowledge_base_document_name ON knowledge_base (document_name)")
         )
+        # 新增 qa_records 表的 status 和 updated_at 字段
+        connection.execute(
+            text("ALTER TABLE qa_records ADD COLUMN IF NOT EXISTS status VARCHAR(20) NOT NULL DEFAULT 'active'")
+        )
+        connection.execute(
+            text("CREATE INDEX IF NOT EXISTS ix_qa_records_status ON qa_records (status)")
+        )
+        connection.execute(
+            text("ALTER TABLE qa_records ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP NOT NULL DEFAULT NOW()")
+        )
+        connection.execute(
+            text("UPDATE qa_records SET updated_at = created_at WHERE updated_at IS NULL")
+        )
     print("Database initialized with pgvector extension and application tables.")
 
 
