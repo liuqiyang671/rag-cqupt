@@ -675,3 +675,102 @@ body {
     display: none;
   }
 }
+
+/* 历史页面样式 */
+.history-page {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.history-page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.history-page-content {
+  min-height: 600px;
+}
+
+.history-page-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.history-page-loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 300px;
+}
+
+.history-page-select-all {
+  margin-bottom: 12px;
+}
+
+.history-record-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 16px;
+  margin-bottom: 12px;
+  background: #fafafa;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.history-record-card:hover {
+  background: #f0f9f6;
+}
+
+.history-record-card.selected {
+  background: #e6f7f2;
+  border: 1px solid #14745f;
+}
+
+.history-record-checkbox {
+  width: 18px;
+  height: 18px;
+  margin-top: 4px;
+  accent-color: #14745f;
+  cursor: pointer;
+}
+
+.history-record-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.history-record-question-large {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #1a2724;
+}
+
+.history-record-answer {
+  font-size: 14px;
+  color: #666;
+  line-height: 1.6;
+  margin-bottom: 12px;
+}
+
+.history-record-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.history-page-pagination {
+  display: flex;
+  justify-content: center;
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid #f0f0f0;
+}

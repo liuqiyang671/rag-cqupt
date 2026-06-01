@@ -5,6 +5,7 @@ import { BrowserRouter, Route, Routes, useLocation, useNavigate } from 'react-ro
 import { getMe } from './api/auth';
 import { ChatPage } from './pages/ChatPage';
 import { FeedbackPage } from './pages/FeedbackPage';
+import { HistoryPage } from './pages/HistoryPage';
 import { KnowledgePage } from './pages/KnowledgePage';
 import { LoginPage } from './pages/LoginPage';
 import type { User } from './types';
@@ -59,6 +60,7 @@ function AppShell() {
           items={[
             { key: '/', label: '智能问答' },
             { key: '/knowledge', label: '知识库' },
+            { key: '/history', label: '历史' },
             { key: '/feedback', label: '反馈' },
           ]}
         />
@@ -79,6 +81,7 @@ function AppShell() {
         <Routes>
           <Route path="/" element={<ChatPage />} />
           <Route path="/knowledge" element={<KnowledgePage />} />
+          <Route path="/history" element={<HistoryPage />} />
           <Route path="/feedback" element={<FeedbackPage />} />
         </Routes>
       </Content>
