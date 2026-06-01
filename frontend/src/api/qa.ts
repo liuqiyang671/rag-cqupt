@@ -1,5 +1,5 @@
 import { apiClient } from './client';
-import type { AskResponse, KnowledgeItem } from '../types';
+import type { AskResponse, KnowledgeItem, QARecord, QARecordListResponse } from '../types';
 
 export async function askQuestion(question: string): Promise<AskResponse> {
   const response = await apiClient.post<AskResponse>('/qa/ask', { question });
@@ -58,6 +58,9 @@ export async function askQuestionStream(
             callbacks.onChunk(data.content);
           } else if (data.type === 'done') {
             callbacks.onDone(data);
+          } else if (data.type === 'error') {
+            callbacks.onError(new Error(data.message || '模型或 Embedding 服务不可用。'));
+            return;
           }
         } catch {
           // skip malformed JSON lines
@@ -82,4 +85,34 @@ async function getStreamErrorMessage(response: Response): Promise<string> {
     return '登录状态已失效，请重新登录。';
   }
   return `问答请求失败：HTTP ${response.status}`;
+}
+
+export async function getQARecords(
+  status: string = 'active',
+  skip: number = 0,
+  limit: number = 20
+): Promise<QARecordListResponse> {
+  const response = await apiClient.get('/qa/records', {
+    params: { status, skip, limit }
+  });
+  return response.data;
+}
+
+export async function getQARecord(id: number): Promise<QARecord> {
+  const response = await apiClient.get(`/qa/records/${id}`);
+  return response.data;
+}
+
+export async function archiveRecord(id: number): Promise<QARecord> {
+  const response = await apiClient.put(`/qa/records/${id}/archive`);
+  return response.data;
+}
+
+export async function restoreRecord(id: number): Promise<QARecord> {
+  const response = await apiClient.put(`/qa/records/${id}/restore`);
+  return response.data;
+}
+
+export async function deleteRecord(id: number): Promise<void> {
+  await apiClient.delete(`/qa/records/${id}`);
 }

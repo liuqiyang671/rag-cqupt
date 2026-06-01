@@ -86,3 +86,21 @@ export interface AuthResponse {
   access_token: string;
   token_type: string;
 }
+
+export interface QARecord {
+  id: number;
+  question: string;
+  answer: string;
+  retrieved_context: KnowledgeItem[];
+  model_provider: string;
+  status: 'active' | 'archived' | 'deleted';
+  created_at: string;
+  updated_at: string;
+}
+
+export interface QARecordListResponse {
+  records: QARecord[];
+  total: number;
+  skip: number;
+  limit: number;
+}
