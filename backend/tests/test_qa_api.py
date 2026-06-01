@@ -113,3 +113,23 @@ def test_get_single_record():
     response = client.get(f"/api/qa/records/{record.id}")
     assert response.status_code == 200
     assert response.json()["question"] == "q1"
+
+
+def test_archive_nonexistent_returns_404():
+    response = client.put("/api/qa/records/999/archive")
+    assert response.status_code == 404
+
+
+def test_get_nonexistent_returns_404():
+    response = client.get("/api/qa/records/999")
+    assert response.status_code == 404
+
+
+def test_delete_nonexistent_returns_404():
+    response = client.delete("/api/qa/records/999")
+    assert response.status_code == 404
+
+
+def test_list_records_with_invalid_status_returns_422():
+    response = client.get("/api/qa/records?status=garbage")
+    assert response.status_code == 422

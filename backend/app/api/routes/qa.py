@@ -1,3 +1,5 @@
+from typing import Literal
+
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
@@ -66,7 +68,7 @@ async def ask_stream(
 
 @router.get("/records", response_model=QARecordListResponse)
 def records(
-    status: str = "active",
+    status: Literal["active", "archived"] = "active",
     skip: int = 0,
     limit: int = 50,
     db: Session = Depends(get_db),
