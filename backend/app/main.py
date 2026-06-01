@@ -1,3 +1,5 @@
+from typing import Dict
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -18,7 +20,7 @@ def create_app() -> FastAPI:
     )
 
     @app.get("/api/health")
-    def health() -> dict[str, str]:
+    def health() -> Dict[str, str]:
         return {"status": "ok"}
 
     app.include_router(auth.router, prefix="/api")

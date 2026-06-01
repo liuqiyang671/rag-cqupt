@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -6,7 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field
 class RegisterRequest(BaseModel):
     username: str = Field(..., min_length=3, max_length=50)
     password: str = Field(..., min_length=6, max_length=100)
-    nickname: str | None = Field(default=None, max_length=100)
+    nickname: Optional[str] = Field(default=None, max_length=100)
 
 
 class LoginRequest(BaseModel):
@@ -22,7 +23,7 @@ class TokenResponse(BaseModel):
 class UserResponse(BaseModel):
     id: int
     username: str
-    nickname: str | None = None
+    nickname: Optional[str] = None
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)

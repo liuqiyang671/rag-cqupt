@@ -1,6 +1,7 @@
 import re
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Optional, Union
 from uuid import uuid4
 
 DEFAULT_UPLOAD_FILENAME = "uploaded-document"
@@ -30,7 +31,7 @@ WINDOWS_RESERVED_NAMES = {
 }
 
 
-def save_uploaded_file(filename: str | None, data: bytes, upload_dir: str | Path) -> Path:
+def save_uploaded_file(filename: Optional[str], data: bytes, upload_dir: Union[str, Path]) -> Path:
     if not data:
         raise ValueError("Uploaded file is empty")
 
@@ -43,7 +44,7 @@ def save_uploaded_file(filename: str | None, data: bytes, upload_dir: str | Path
     return stored_path
 
 
-def delete_uploaded_file(path: str | Path | None) -> None:
+def delete_uploaded_file(path: Optional[Union[str, Path]]) -> None:
     if not path:
         return
     try:
@@ -52,7 +53,7 @@ def delete_uploaded_file(path: str | Path | None) -> None:
         pass
 
 
-def sanitize_filename(filename: str | None) -> str:
+def sanitize_filename(filename: Optional[str]) -> str:
     original = Path(filename or DEFAULT_UPLOAD_FILENAME).name
     cleaned = re.sub(r'[<>:"/\\|?*\x00-\x1f]+', "_", original).strip(" .")
     if not cleaned:

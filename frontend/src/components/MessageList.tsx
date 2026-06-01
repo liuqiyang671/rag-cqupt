@@ -62,8 +62,13 @@ export function MessageList({ messages, onFeedback }: MessageListProps) {
                     <div className="citation" key={item.id}>
                       <Space wrap>
                         <Tag color="cyan">{item.category}</Tag>
+                        {item.citation_index && <Tag color="geekblue">[{item.citation_index}]</Tag>}
+                        {typeof item.relevance_score === 'number' && (
+                          <Tag color="green">相关度 {Math.round(item.relevance_score * 100)}%</Tag>
+                        )}
                         <Typography.Text strong>{item.title}</Typography.Text>
                         <Typography.Text type="secondary">{item.source}</Typography.Text>
+                        {item.match_reason && <Typography.Text type="secondary">{item.match_reason}</Typography.Text>}
                       </Space>
                       <Typography.Paragraph ellipsis={{ rows: 2, expandable: true }}>
                         {item.content}
@@ -98,4 +103,3 @@ export function MessageList({ messages, onFeedback }: MessageListProps) {
     />
   );
 }
-

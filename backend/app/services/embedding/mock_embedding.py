@@ -1,6 +1,7 @@
 import hashlib
 import math
 import re
+from typing import List
 
 from app.services.embedding.base import EmbeddingClient
 
@@ -14,10 +15,10 @@ class MockEmbeddingClient(EmbeddingClient):
     def __init__(self, dimension: int = 768):
         self.dimension = dimension
 
-    async def embed(self, text: str) -> list[float]:
+    async def embed(self, text: str) -> List[float]:
         return self.embed_sync(text)
 
-    def embed_sync(self, text: str) -> list[float]:
+    def embed_sync(self, text: str) -> List[float]:
         vector = [0.0 for _ in range(self.dimension)]
         tokens = TOKEN_RE.findall(text.lower())
         if not tokens:

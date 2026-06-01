@@ -1,10 +1,10 @@
 import json
-from typing import AsyncGenerator
+from typing import AsyncGenerator, Dict, List
 
 import httpx
 
+from app.core.ai_errors import ModelProviderError
 from app.services.llm.base import LLMClient
-from app.services.llm.fallback_client import FallbackLLMClient
 
 
 class SiliconFlowLLMClient(LLMClient):
@@ -12,11 +12,10 @@ class SiliconFlowLLMClient(LLMClient):
         self.api_key = api_key
         self.base_url = base_url.rstrip("/")
         self.model = model
-        self.fallback = FallbackLLMClient()
 
-    async def chat(self, messages: list[dict[str, str]]) -> str:
+    async def chat(self, messages: List[Dict[str, str]]) -> str:
         if not self.api_key:
-            return await self.fallback.chat(messages)
+            raise ModelProviderError("硅基流动问答模型不可用：未配置 SILICONFLOW_API_KEY。")
 
         try:
             async with httpx.AsyncClient(timeout=60) as client:
@@ -29,13 +28,12 @@ class SiliconFlowLLMClient(LLMClient):
                 payload = response.json()
                 content = payload["choices"][0]["message"]["content"]
                 return str(content)
-        except Exception:
-            return await self.fallback.chat(messages)
+        except Exception as exc:
+            raise ModelProviderError(f"硅基流动问答模型不可用：{self.model}。") from exc
 
-    async def chat_stream(self, messages: list[dict[str, str]]) -> AsyncGenerator[str, None]:
+    async def chat_stream(self, messages: List[Dict[str, str]]) -> AsyncGenerator[str, None]:
         if not self.api_key:
-            yield await self.fallback.chat(messages)
-            return
+            raise ModelProviderError("硅基流动问答模型不可用：未配置 SILICONFLOW_API_KEY。")
 
         try:
             async with httpx.AsyncClient(timeout=120) as client:
@@ -57,6 +55,5 @@ class SiliconFlowLLMClient(LLMClient):
                         content = delta.get("content", "")
                         if content:
                             yield content
-        except Exception:
-            yield await self.fallback.chat(messages)
-
+        except Exception as exc:
+            raise ModelProviderError(f"硅基流动问答模型不可用：{self.model}。") from exc

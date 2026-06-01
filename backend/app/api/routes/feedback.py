@@ -1,3 +1,5 @@
+from typing import List
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -25,7 +27,7 @@ def create_feedback(
     return feedback
 
 
-@router.get("", response_model=list[FeedbackResponse])
+@router.get("", response_model=List[FeedbackResponse])
 def list_feedback(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     statement = select(Feedback).order_by(Feedback.created_at.desc()).offset(skip).limit(limit)
     return list(db.scalars(statement).all())

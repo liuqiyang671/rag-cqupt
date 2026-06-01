@@ -28,7 +28,7 @@ def test_clear_application_data_removes_all_app_table_rows(tmp_path):
                 category="教务服务",
                 content="旧知识内容",
                 source="旧数据",
-                embedding=[0.0] * 768,
+                embedding=[0.0] * 4096,
             )
         )
         db.add(QARecord(question="旧问题", answer="旧回答", retrieved_context=[], model_provider="mock"))

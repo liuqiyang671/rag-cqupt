@@ -1,14 +1,14 @@
 import json
 import re
-from typing import AsyncGenerator
+from typing import AsyncGenerator, Dict, List, Optional
 
 from sqlalchemy.orm import Session
 
-from app.schemas.knowledge import RetrievedKnowledge
+from app.core.ai_errors import AIServiceError
 from app.services.embedding.base import EmbeddingClient
-from app.services.knowledge_service import retrieve_similar_knowledge
 from app.services.llm.base import LLMClient
 from app.services.qa_service import create_qa_record
+from app.services.retrieval_service import retrieve_hybrid_knowledge
 
 
 SYSTEM_PROMPT = "你是高校校园服务智能问答助手。"
@@ -50,12 +50,14 @@ CASUAL_PRAISE = {
 CASUAL_PUNCTUATION_RE = re.compile(r"[\s,，。.!！?？~～、]+")
 
 
-def build_prompt(question: str, context_items: list[dict]) -> str:
+def build_prompt(question: str, context_items: List[Dict]) -> str:
     if context_items:
         context = "\n\n".join(
             (
-                f"[{index}] {item['title']}（{item.get('category', '未分类')}，"
-                f"来源：{item.get('source') or '校内知识库'}）\n{item['content']}"
+                f"[{item.get('citation_index') or index}] {item['title']}（{item.get('category', '未分类')}，"
+                f"来源：{item.get('source') or '校内知识库'}，"
+                f"相关度：{item.get('relevance_score', '未知')}，"
+                f"命中原因：{item.get('match_reason') or '语义相似'}）\n{item['content']}"
             )
             for index, item in enumerate(context_items, start=1)
         )
@@ -73,6 +75,8 @@ def build_prompt(question: str, context_items: list[dict]) -> str:
 5. 涉及地点、时间、电话、网址等信息时，要原样引用知识库内容。
 6. 回答末尾可以提示用户联系相关部门确认最新信息。
 7. 回答控制在 300 字以内，不要展开与问题无关的知识。
+8. 使用引用编号标注依据，例如“需要先挂失[1]”。
+9. 回答末尾列出引用来源，格式为“引用来源：[1] 标题 - 来源”。
 
 知识库内容：
 {context}
@@ -87,7 +91,7 @@ def normalize_casual_message(question: str) -> str:
     return CASUAL_PUNCTUATION_RE.sub("", question.strip().lower())
 
 
-def build_casual_answer(question: str) -> str | None:
+def build_casual_answer(question: str) -> Optional[str]:
     normalized = normalize_casual_message(question)
     if not normalized:
         return "你好，我是校园问答助手。你可以问我选课、校园卡、图书馆、宿舍、奖助学金、就业、医疗、后勤报修、校园网络等问题。"
@@ -123,7 +127,7 @@ class RAGService:
         self.model_provider = model_provider
         self.top_k = top_k
 
-    async def ask(self, question: str) -> dict:
+    async def ask(self, question: str) -> Dict:
         casual_answer = build_casual_answer(question)
         if casual_answer is not None:
             record = create_qa_record(
@@ -141,11 +145,7 @@ class RAGService:
             }
 
         query_embedding = await self.embedding_client.embed(question)
-        knowledge_items = retrieve_similar_knowledge(self.db, query_embedding, self.top_k)
-        context_items = [
-            RetrievedKnowledge.model_validate(item).model_dump()
-            for item in knowledge_items
-        ]
+        context_items = retrieve_hybrid_knowledge(self.db, question, query_embedding, self.top_k)
         prompt = build_prompt(question=question, context_items=context_items)
         answer = await self.llm_client.chat(
             [
@@ -169,65 +169,65 @@ class RAGService:
 
     async def ask_stream(self, question: str) -> AsyncGenerator[str, None]:
         """Stream the RAG answer as SSE events."""
-        casual_answer = build_casual_answer(question)
-        if casual_answer is not None:
+        try:
+            casual_answer = build_casual_answer(question)
+            if casual_answer is not None:
+                metadata = {
+                    "type": "metadata",
+                    "retrieved_context": [],
+                    "model_provider": DIRECT_RESPONSE_PROVIDER,
+                }
+                yield f"data: {json.dumps(metadata, ensure_ascii=False)}\n\n"
+                event = {"type": "chunk", "content": casual_answer}
+                yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
+                record = create_qa_record(
+                    self.db,
+                    question=question,
+                    answer=casual_answer,
+                    retrieved_context=[],
+                    model_provider=DIRECT_RESPONSE_PROVIDER,
+                )
+                done = {"type": "done", "qa_record_id": record.id}
+                yield f"data: {json.dumps(done, ensure_ascii=False)}\n\n"
+                return
+
+            # 1. Retrieve relevant knowledge
+            query_embedding = await self.embedding_client.embed(question)
+            context_items = retrieve_hybrid_knowledge(self.db, question, query_embedding, self.top_k)
+
+            # 2. Send metadata event
             metadata = {
                 "type": "metadata",
-                "retrieved_context": [],
-                "model_provider": DIRECT_RESPONSE_PROVIDER,
+                "retrieved_context": context_items,
+                "model_provider": self.model_provider,
             }
             yield f"data: {json.dumps(metadata, ensure_ascii=False)}\n\n"
-            event = {"type": "chunk", "content": casual_answer}
-            yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
+
+            # 3. Stream LLM answer
+            prompt = build_prompt(question=question, context_items=context_items)
+            messages = [
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": prompt},
+            ]
+            full_answer: List[str] = []
+            async for chunk in self.llm_client.chat_stream(messages):
+                full_answer.append(chunk)
+                event = {"type": "chunk", "content": chunk}
+                yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
+
+            # 4. Save QA record
+            answer_text = "".join(full_answer)
             record = create_qa_record(
                 self.db,
                 question=question,
-                answer=casual_answer,
-                retrieved_context=[],
-                model_provider=DIRECT_RESPONSE_PROVIDER,
+                answer=answer_text,
+                retrieved_context=context_items,
+                model_provider=self.model_provider,
             )
+
+            # 5. Send done event
             done = {"type": "done", "qa_record_id": record.id}
             yield f"data: {json.dumps(done, ensure_ascii=False)}\n\n"
-            return
-
-        # 1. Retrieve relevant knowledge
-        query_embedding = await self.embedding_client.embed(question)
-        knowledge_items = retrieve_similar_knowledge(self.db, query_embedding, self.top_k)
-        context_items = [
-            RetrievedKnowledge.model_validate(item).model_dump()
-            for item in knowledge_items
-        ]
-
-        # 2. Send metadata event
-        metadata = {
-            "type": "metadata",
-            "retrieved_context": context_items,
-            "model_provider": self.model_provider,
-        }
-        yield f"data: {json.dumps(metadata, ensure_ascii=False)}\n\n"
-
-        # 3. Stream LLM answer
-        prompt = build_prompt(question=question, context_items=context_items)
-        messages = [
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": prompt},
-        ]
-        full_answer: list[str] = []
-        async for chunk in self.llm_client.chat_stream(messages):
-            full_answer.append(chunk)
-            event = {"type": "chunk", "content": chunk}
+        except AIServiceError as exc:
+            event = {"type": "error", "message": str(exc)}
             yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
-
-        # 4. Save QA record
-        answer_text = "".join(full_answer)
-        record = create_qa_record(
-            self.db,
-            question=question,
-            answer=answer_text,
-            retrieved_context=context_items,
-            model_provider=self.model_provider,
-        )
-
-        # 5. Send done event
-        done = {"type": "done", "qa_record_id": record.id}
-        yield f"data: {json.dumps(done, ensure_ascii=False)}\n\n"

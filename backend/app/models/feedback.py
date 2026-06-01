@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from typing import Optional
 
 from sqlalchemy import DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
@@ -18,5 +19,5 @@ class Feedback(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     qa_record_id: Mapped[int] = mapped_column(ForeignKey("qa_records.id", ondelete="CASCADE"), nullable=False)
     rating: Mapped[str] = mapped_column(String(20), nullable=False)
-    comment: Mapped[str | None] = mapped_column(Text, nullable=True)
+    comment: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now, nullable=False)

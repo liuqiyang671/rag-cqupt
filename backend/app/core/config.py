@@ -24,8 +24,8 @@ class Settings(BaseSettings):
 
     embedding_provider: str = Field(default="local", alias="EMBEDDING_PROVIDER")
     local_embedding_base_url: str = Field(default="http://localhost:11434", alias="LOCAL_EMBEDDING_BASE_URL")
-    local_embedding_model: str = Field(default="nomic-embed-text", alias="LOCAL_EMBEDDING_MODEL")
-    embedding_dimension: int = Field(default=768, alias="EMBEDDING_DIMENSION")
+    local_embedding_model: str = Field(default="qwen3-embedding:8b-fp16", alias="LOCAL_EMBEDDING_MODEL")
+    embedding_dimension: int = Field(default=4096, alias="EMBEDDING_DIMENSION")
     top_k: int = Field(default=5, alias="TOP_K")
     upload_dir: str = Field(default="", alias="UPLOAD_DIR")
 

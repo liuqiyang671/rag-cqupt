@@ -1,7 +1,9 @@
+from typing import List
+
 import httpx
 
+from app.core.ai_errors import EmbeddingProviderError
 from app.services.embedding.base import EmbeddingClient
-from app.services.embedding.mock_embedding import MockEmbeddingClient
 
 
 class SiliconFlowEmbeddingClient(EmbeddingClient):
@@ -9,11 +11,11 @@ class SiliconFlowEmbeddingClient(EmbeddingClient):
         self.api_key = api_key
         self.base_url = base_url.rstrip("/")
         self.model = model
-        self.fallback = MockEmbeddingClient(dimension=dimension)
+        self.dimension = dimension
 
-    async def embed(self, text: str) -> list[float]:
+    async def embed(self, text: str) -> List[float]:
         if not self.api_key:
-            return await self.fallback.embed(text)
+            raise EmbeddingProviderError("硅基流动 Embedding 不可用：未配置 SILICONFLOW_API_KEY。")
 
         try:
             async with httpx.AsyncClient(timeout=30) as client:
@@ -25,7 +27,14 @@ class SiliconFlowEmbeddingClient(EmbeddingClient):
                 response.raise_for_status()
                 payload = response.json()
                 embedding = payload["data"][0]["embedding"]
-                return [float(value) for value in embedding]
-        except Exception:
-            return await self.fallback.embed(text)
-
+                values = [float(value) for value in embedding]
+                if len(values) != self.dimension:
+                    raise EmbeddingProviderError(
+                        f"需要重新构建知识库向量：硅基流动 Embedding 模型 {self.model} 返回 {len(values)} 维，"
+                        f"当前配置需要 {self.dimension} 维。"
+                    )
+                return values
+        except EmbeddingProviderError:
+            raise
+        except Exception as exc:
+            raise EmbeddingProviderError(f"硅基流动 Embedding 不可用：{self.model}。") from exc

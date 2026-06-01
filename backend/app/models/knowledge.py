@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from typing import List, Optional
 
 from pgvector.sqlalchemy import Vector
 from sqlalchemy import DateTime, Integer, String, Text
@@ -22,12 +23,12 @@ class KnowledgeBase(Base):
     category: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
     content: Mapped[str] = mapped_column(Text, nullable=False)
     source: Mapped[str] = mapped_column(String(255), nullable=False, default="校内知识库")
-    document_name: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
-    document_path: Mapped[str | None] = mapped_column(String(500), nullable=True)
-    chunk_index: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    chunk_total: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    chunking_method: Mapped[str | None] = mapped_column(String(50), nullable=True)
-    embedding: Mapped[list[float]] = mapped_column(Vector(get_settings().embedding_dimension), nullable=False)
+    document_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True, index=True)
+    document_path: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    chunk_index: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    chunk_total: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    chunking_method: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    embedding: Mapped[List[float]] = mapped_column(Vector(get_settings().embedding_dimension), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,

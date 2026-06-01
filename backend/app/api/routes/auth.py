@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -33,7 +34,7 @@ def get_current_user(
     token = credentials.credentials
     try:
         payload = jwt.decode(token, settings.secret_key, algorithms=["HS256"])
-        username: str | None = payload.get("sub")
+        username: Optional[str] = payload.get("sub")
         if username is None:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="无效的认证令牌")
     except JWTError:

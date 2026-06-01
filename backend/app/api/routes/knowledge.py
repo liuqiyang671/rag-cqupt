@@ -1,6 +1,9 @@
+from typing import List, Optional
+
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile, status
 from sqlalchemy.orm import Session
 
+from app.core.ai_errors import AIServiceError
 from app.core.config import Settings, get_settings
 from app.core.database import get_db
 from app.schemas.knowledge import (
@@ -23,9 +26,9 @@ from app.services.upload_storage_service import delete_uploaded_file, save_uploa
 router = APIRouter(prefix="/knowledge", tags=["knowledge"])
 
 
-@router.get("", response_model=list[KnowledgeResponse])
+@router.get("", response_model=List[KnowledgeResponse])
 def list_items(
-    category: str | None = None,
+    category: Optional[str] = None,
     skip: int = 0,
     limit: int = 100,
     db: Session = Depends(get_db),
@@ -39,7 +42,10 @@ async def create_item(
     db: Session = Depends(get_db),
     settings: Settings = Depends(get_settings),
 ):
-    return await create_knowledge(db, payload, get_embedding_client(settings))
+    try:
+        return await create_knowledge(db, payload, get_embedding_client(settings))
+    except AIServiceError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
 @router.post("/import", response_model=DocumentImportResponse, status_code=status.HTTP_201_CREATED)
@@ -73,6 +79,9 @@ async def import_document(
     except ValueError as exc:
         delete_uploaded_file(stored_file_path)
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except AIServiceError as exc:
+        delete_uploaded_file(stored_file_path)
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
     except Exception:
         delete_uploaded_file(stored_file_path)
         raise
@@ -103,7 +112,10 @@ async def update_item(
     item = get_knowledge(db, knowledge_id)
     if not item:
         raise HTTPException(status_code=404, detail="Knowledge item not found")
-    return await update_knowledge(db, item, payload, get_embedding_client(settings))
+    try:
+        return await update_knowledge(db, item, payload, get_embedding_client(settings))
+    except AIServiceError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
 @router.delete("/{knowledge_id}", status_code=status.HTTP_204_NO_CONTENT)

@@ -1,10 +1,14 @@
 from sqlalchemy import text
 
+from app.core.ai_errors import VectorSchemaError
+from app.core.config import get_settings
 from app.core.database import Base, engine
 from app.models import Feedback, KnowledgeBase, QARecord, User  # noqa: F401
+from app.services.vector_schema import ensure_knowledge_embedding_dimension
 
 
 def init_db() -> None:
+    settings = get_settings()
     with engine.begin() as connection:
         connection.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
     Base.metadata.create_all(bind=engine)
@@ -36,8 +40,13 @@ def init_db() -> None:
         connection.execute(
             text("ALTER TABLE qa_records ALTER COLUMN updated_at SET DEFAULT NOW()")
         )
+        ensure_knowledge_embedding_dimension(connection, settings.embedding_dimension)
     print("Database initialized with pgvector extension and application tables.")
 
 
 if __name__ == "__main__":
-    init_db()
+    try:
+        init_db()
+    except VectorSchemaError as exc:
+        print(str(exc))
+        raise SystemExit(1) from exc

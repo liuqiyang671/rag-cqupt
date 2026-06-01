@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Dict, List, Optional
 
 from sqlalchemy import select, func
 from sqlalchemy.orm import Session
@@ -10,7 +10,7 @@ def create_qa_record(
     db: Session,
     question: str,
     answer: str,
-    retrieved_context: list[dict],
+    retrieved_context: List[Dict],
     model_provider: str,
 ) -> QARecord:
     record = QARecord(
@@ -35,7 +35,7 @@ def list_qa_records(
     status: str = "active",
     skip: int = 0,
     limit: int = 50
-) -> list[QARecord]:
+) -> List[QARecord]:
     statement = (
         select(QARecord)
         .where(QARecord.status == status)

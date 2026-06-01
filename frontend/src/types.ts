@@ -4,6 +4,9 @@ export interface KnowledgeItem {
   category: string;
   content: string;
   source: string;
+  citation_index?: number | null;
+  relevance_score?: number | null;
+  match_reason?: string | null;
   document_name?: string | null;
   document_path?: string | null;
   chunk_index?: number | null;

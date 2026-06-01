@@ -1,6 +1,7 @@
 from io import BytesIO
 from pathlib import Path
 import re
+from typing import List, Optional
 
 from docx import Document
 from pypdf import PdfReader
@@ -30,7 +31,7 @@ def extract_text_from_document(filename: str, data: bytes) -> str:
     raise ValueError(f"Unsupported document type: {extension or 'unknown'}")
 
 
-def split_text_into_chunks(text: str, chunk_size: int = 1200, chunk_overlap: int = 150) -> list[str]:
+def split_text_into_chunks(text: str, chunk_size: int = 1200, chunk_overlap: int = 150) -> List[str]:
     normalized = _normalize_text(text)
     if not normalized:
         return []
@@ -39,7 +40,7 @@ def split_text_into_chunks(text: str, chunk_size: int = 1200, chunk_overlap: int
     if chunk_overlap < 0 or chunk_overlap >= chunk_size:
         raise ValueError("chunk_overlap must be smaller than chunk_size")
 
-    chunks: list[str] = []
+    chunks: List[str] = []
     start = 0
     while start < len(normalized):
         end = min(start + chunk_size, len(normalized))
@@ -57,7 +58,7 @@ def split_text_by_method(
     chunking_method: str = "fixed_size",
     chunk_size: int = 1200,
     chunk_overlap: int = 150,
-) -> list[str]:
+) -> List[str]:
     normalized = _normalize_text(text)
     if not normalized:
         return []
@@ -68,7 +69,7 @@ def split_text_by_method(
     if chunking_method == "markdown_heading":
         return split_markdown_by_headings(normalized, chunk_size=chunk_size, chunk_overlap=chunk_overlap)
     if chunking_method == "paragraph":
-        chunks: list[str] = []
+        chunks: List[str] = []
         for paragraph in normalized.split("\n"):
             paragraph = paragraph.strip()
             if not paragraph:
@@ -81,7 +82,7 @@ def split_text_by_method(
     return split_text_into_chunks(normalized, chunk_size=chunk_size, chunk_overlap=chunk_overlap)
 
 
-def split_markdown_by_headings(text: str, chunk_size: int = 1200, chunk_overlap: int = 150) -> list[str]:
+def split_markdown_by_headings(text: str, chunk_size: int = 1200, chunk_overlap: int = 150) -> List[str]:
     normalized = _normalize_text(text)
     if not normalized:
         return []
@@ -90,8 +91,8 @@ def split_markdown_by_headings(text: str, chunk_size: int = 1200, chunk_overlap:
     if chunk_overlap < 0 or chunk_overlap >= chunk_size:
         raise ValueError("chunk_overlap must be smaller than chunk_size")
 
-    sections: list[list[str]] = []
-    current: list[str] = []
+    sections: List[List[str]] = []
+    current: List[str] = []
     in_fence = False
 
     for line in normalized.split("\n"):
@@ -115,7 +116,7 @@ def split_markdown_by_headings(text: str, chunk_size: int = 1200, chunk_overlap:
     if len(sections) <= 1 and not MARKDOWN_HEADING_PATTERN.match(sections[0][0]):
         return split_text_into_chunks(normalized, chunk_size=chunk_size, chunk_overlap=chunk_overlap)
 
-    chunks: list[str] = []
+    chunks: List[str] = []
     for section in sections:
         section_text = "\n".join(section).strip()
         if not section_text:
@@ -132,11 +133,11 @@ def build_knowledge_payloads_from_document(
     data: bytes,
     category: str,
     source: str,
-    document_path: str | None = None,
+    document_path: Optional[str] = None,
     chunking_method: str = "fixed_size",
     chunk_size: int = 1200,
     chunk_overlap: int = 150,
-) -> list[KnowledgeCreate]:
+) -> List[KnowledgeCreate]:
     text = extract_text_from_document(filename, data)
     chunks = split_text_by_method(
         text,
@@ -177,11 +178,11 @@ async def import_document_to_knowledge(
     category: str,
     source: str,
     embedding_client: EmbeddingClient,
-    document_path: str | None = None,
+    document_path: Optional[str] = None,
     chunking_method: str = "fixed_size",
     chunk_size: int = 1200,
     chunk_overlap: int = 150,
-) -> list[KnowledgeBase]:
+) -> List[KnowledgeBase]:
     payloads = build_knowledge_payloads_from_document(
         filename=filename,
         data=data,
@@ -192,7 +193,7 @@ async def import_document_to_knowledge(
         chunk_size=chunk_size,
         chunk_overlap=chunk_overlap,
     )
-    imported: list[KnowledgeBase] = []
+    imported: List[KnowledgeBase] = []
     for payload in payloads:
         imported.append(await create_knowledge(db, payload, embedding_client))
     return imported
@@ -200,7 +201,7 @@ async def import_document_to_knowledge(
 
 def _extract_docx_text(data: bytes) -> str:
     document = Document(BytesIO(data))
-    parts: list[str] = []
+    parts: List[str] = []
     for paragraph in document.paragraphs:
         text = paragraph.text.strip()
         if text:

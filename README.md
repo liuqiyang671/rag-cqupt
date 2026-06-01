@@ -97,6 +97,14 @@ python -m app.scripts.init_db
 python -m app.scripts.seed_knowledge
 ```
 
+如果切换了 Embedding 模型或维度，`init_db` 会检查 `knowledge_base.embedding` 的 pgvector 维度。出现“需要重新构建知识库向量”提示时，先执行：
+
+```bash
+cd backend
+python -m app.scripts.rebuild_knowledge_embeddings
+python -m app.scripts.init_db
+```
+
 如需清空当前演示数据并重建一套完整的校园服务知识库，可运行：
 
 ```bash
@@ -164,10 +172,10 @@ EMBEDDING_PROVIDER=local
 
 ```env
 LOCAL_LLM_BASE_URL=http://localhost:11434
-LOCAL_LLM_MODEL=qwen2.5:7b
+LOCAL_LLM_MODEL=qwen3.5:9b
 LOCAL_EMBEDDING_BASE_URL=http://localhost:11434
-LOCAL_EMBEDDING_MODEL=nomic-embed-text
-EMBEDDING_DIMENSION=768
+LOCAL_EMBEDDING_MODEL=qwen3-embedding:8b-fp16
+EMBEDDING_DIMENSION=4096
 ```
 
 切换到硅基流动：
@@ -182,7 +190,7 @@ SILICONFLOW_EMBEDDING_MODEL=BAAI/bge-m3
 EMBEDDING_DIMENSION=1024
 ```
 
-如果本地模型不可用或未填写硅基流动 API Key，系统会使用 mock embedding 和基于检索内容的降级回答，保证 MVP 可以跑通。
+如果配置为 `local` 或 `siliconflow`，模型或 Embedding 不可用时系统会返回明确错误，前端会提示需要检查模型服务、API Key 或重建向量；不会再静默降级成假回答。
 
 开发或自动化验收时，也可以显式使用不访问外部模型的模式：
 
@@ -371,8 +379,21 @@ python -m app.scripts.init_db
 
 ### 切换 embedding 模型后写入失败
 
-pgvector 列有固定维度。切换 embedding 模型时，需要同步调整 `EMBEDDING_DIMENSION`，并重新初始化数据库或迁移表结构。
+pgvector 列有固定维度。切换 Embedding 模型时，需要同步调整 `EMBEDDING_DIMENSION`，并执行：
+
+```bash
+python -m app.scripts.rebuild_knowledge_embeddings
+```
+
+该脚本会保留现有知识条目的标题、分类、内容、来源和文档切片信息，只重建 `knowledge_base.embedding` 向量列并重新写入向量。
 
 ### 没有本地模型或硅基流动 Key 能不能运行
 
-可以。系统会降级到 mock embedding 和基于检索内容的 fallback 回答，适合开发和演示。
+可以用于开发，但需要显式设置为 mock：
+
+```env
+MODEL_PROVIDER=mock
+EMBEDDING_PROVIDER=mock
+```
+
+只要配置为 `local` 或 `siliconflow`，模型不可用就会明确报错，避免误以为已经接入真实模型。

@@ -1,4 +1,5 @@
 import re
+from typing import Dict, List
 
 from app.services.llm.base import LLMClient
 
@@ -6,7 +7,7 @@ from app.services.llm.base import LLMClient
 class FallbackLLMClient(LLMClient):
     """Evidence-based local fallback used when external model calls are unavailable."""
 
-    async def chat(self, messages: list[dict[str, str]]) -> str:
+    async def chat(self, messages: List[Dict[str, str]]) -> str:
         prompt = messages[-1].get("content", "") if messages else ""
         context_match = re.search(r"知识库内容：\s*(.*?)\s*用户问题：", prompt, re.S)
         question_match = re.search(r"用户问题：\s*(.*?)\s*请生成回答：", prompt, re.S)

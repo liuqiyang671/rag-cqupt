@@ -1,9 +1,12 @@
+from typing import List, Optional
+
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models.knowledge import KnowledgeBase
 from app.schemas.knowledge import KnowledgeCreate, KnowledgeUpdate
 from app.services.embedding.base import EmbeddingClient
+from app.services.vector_schema import get_knowledge_embedding_dimension, validate_embedding_dimensions
 
 
 def knowledge_embedding_text(title: str, category: str, content: str, source: str) -> str:
@@ -18,6 +21,10 @@ async def create_knowledge(
     embedding = await embedding_client.embed(
         knowledge_embedding_text(payload.title, payload.category, payload.content, payload.source)
     )
+    validate_embedding_dimensions(
+        configured_dimension=len(embedding),
+        database_dimension=get_knowledge_embedding_dimension(db.get_bind()),
+    )
     item = KnowledgeBase(**payload.model_dump(), embedding=embedding)
     db.add(item)
     db.commit()
@@ -27,10 +34,10 @@ async def create_knowledge(
 
 def list_knowledge(
     db: Session,
-    category: str | None = None,
+    category: Optional[str] = None,
     skip: int = 0,
     limit: int = 100,
-) -> list[KnowledgeBase]:
+) -> List[KnowledgeBase]:
     statement = select(KnowledgeBase)
     if category:
         statement = statement.where(KnowledgeBase.category == category)
@@ -38,7 +45,7 @@ def list_knowledge(
     return list(db.scalars(statement).all())
 
 
-def get_knowledge(db: Session, knowledge_id: int) -> KnowledgeBase | None:
+def get_knowledge(db: Session, knowledge_id: int) -> Optional[KnowledgeBase]:
     return db.get(KnowledgeBase, knowledge_id)
 
 
@@ -56,6 +63,10 @@ async def update_knowledge(
         item.embedding = await embedding_client.embed(
             knowledge_embedding_text(item.title, item.category, item.content, item.source)
         )
+        validate_embedding_dimensions(
+            configured_dimension=len(item.embedding),
+            database_dimension=get_knowledge_embedding_dimension(db.get_bind()),
+        )
 
     db.add(item)
     db.commit()
@@ -70,13 +81,16 @@ def delete_knowledge(db: Session, item: KnowledgeBase) -> None:
 
 def retrieve_similar_knowledge(
     db: Session,
-    query_embedding: list[float],
+    query_embedding: List[float],
     top_k: int,
-) -> list[KnowledgeBase]:
+) -> List[KnowledgeBase]:
+    validate_embedding_dimensions(
+        configured_dimension=len(query_embedding),
+        database_dimension=get_knowledge_embedding_dimension(db.get_bind()),
+    )
     statement = (
         select(KnowledgeBase)
         .order_by(KnowledgeBase.embedding.cosine_distance(query_embedding))
         .limit(top_k)
     )
     return list(db.scalars(statement).all())
-
