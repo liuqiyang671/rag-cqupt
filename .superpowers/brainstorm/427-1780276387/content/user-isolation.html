@@ -1,0 +1,47 @@
+<h2>用户数据隔离</h2>
+<p class="subtitle">不同用户的问答记录是否相互可见？</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>完全隔离</h3>
+      <p>每个用户只能看到自己的问答记录，数据完全私有</p>
+      <ul>
+        <li>✅ 保护用户隐私</li>
+        <li>✅ 数据更安全</li>
+        <li>✅ 符合常见应用设计</li>
+        <li>⚠️ 需要用户登录系统</li>
+        <li>⚠️ 数据库需要 user_id 字段</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>全局共享</h3>
+      <p>所有用户共享问答记录，任何人都能看到所有历史</p>
+      <ul>
+        <li>✅ 实现简单</li>
+        <li>✅ 无需用户系统</li>
+        <li>⚠️ 无隐私保护</li>
+        <li>⚠️ 可能产生数据混乱</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>混合模式</h3>
+      <p>用户可以看到自己的记录 + 匿名化的公共记录（隐藏其他用户信息）</p>
+      <ul>
+        <li>✅ 保护隐私</li>
+        <li>✅ 可以学习他人问答</li>
+        <li>⚠️ 实现复杂度中等</li>
+        <li>⚠️ 需要数据脱敏</li>
+      </ul>
+    </div>
+  </div>
+</div>

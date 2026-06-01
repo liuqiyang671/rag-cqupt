@@ -1,0 +1,79 @@
+<h2>问答记录历史界面布局</h2>
+<p class="subtitle">选择历史记录的展示方式</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>侧边栏历史列表</h3>
+      <p>在聊天界面右侧添加历史记录侧边栏，可以展开/收起</p>
+      <div class="pros-cons">
+        <div class="pros">
+          <h4>优点</h4>
+          <ul>
+            <li>不离开当前对话即可查看历史</li>
+            <li>空间利用率高</li>
+            <li>符合常见聊天应用设计</li>
+          </ul>
+        </div>
+        <div class="cons">
+          <h4>缺点</h4>
+          <ul>
+            <li>屏幕空间较小时可能拥挤</li>
+            <li>历史记录展示空间有限</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>独立历史页面</h3>
+      <p>新增一个专门的"历史记录"页面，通过导航菜单访问</p>
+      <div class="pros-cons">
+        <div class="pros">
+          <h4>优点</h4>
+          <ul>
+            <li>展示空间充足</li>
+            <li>可以添加更多筛选和搜索功能</li>
+            <li>界面更清晰</li>
+          </ul>
+        </div>
+        <div class="cons">
+          <h4>缺点</h4>
+          <ul>
+            <li>需要离开当前对话</li>
+            <li>多一次页面跳转</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>混合模式</h3>
+      <p>聊天页面有简洁的历史侧边栏，同时提供独立的完整历史页面</p>
+      <div class="pros-cons">
+        <div class="pros">
+          <h4>优点</h4>
+          <ul>
+            <li>快速访问常用历史</li>
+            <li>完整功能的独立页面</li>
+            <li>灵活性最高</li>
+          </ul>
+        </div>
+        <div class="cons">
+          <h4>缺点</h4>
+          <ul>
+            <li>开发工作量较大</li>
+            <li>需要维护两套 UI</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

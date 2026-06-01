@@ -1,0 +1,233 @@
+import json
+import re
+from typing import AsyncGenerator
+
+from sqlalchemy.orm import Session
+
+from app.schemas.knowledge import RetrievedKnowledge
+from app.services.embedding.base import EmbeddingClient
+from app.services.knowledge_service import retrieve_similar_knowledge
+from app.services.llm.base import LLMClient
+from app.services.qa_service import create_qa_record
+
+
+SYSTEM_PROMPT = "你是高校校园服务智能问答助手。"
+DIRECT_RESPONSE_PROVIDER = "system"
+
+CASUAL_GREETINGS = {
+    # 英文
+    "hi", "hello", "hey", "yo", "hola", "howdy",
+    # 中文问候
+    "你好", "您好", "你好呀", "您好呀", "你好啊",
+    "嗨", "嗨喽", "哈喽", "嘿",
+    "在吗", "在不在", "在嘛", "在啊",
+    # 时段问候
+    "早上好", "上午好", "下午好", "晚上好", "中午好",
+    "早安", "午安", "晚安",
+    # 询问身份
+    "你是谁", "你叫什么", "你叫什么名字", "你是干什么的",
+    "你是什么", "你是什么机器人", "你是什么助手",
+    "介绍一下你自己", "自我介绍",
+    # 能力询问
+    "你能做什么", "你会做什么", "你可以做什么",
+    "你有什么功能", "你有什么用", "你能帮我什么",
+    "怎么用", "怎么使用", "怎么玩",
+}
+CASUAL_THANKS = {
+    "谢谢", "谢谢你", "感谢", "感谢你", "多谢", "多谢你",
+    "谢啦", "谢了", "辛苦了", "辛苦啦", "麻烦了", "麻烦你了",
+    "好的", "好", "ok", "okay", "okey",
+    "知道了", "明白了", "了解了", "收到", "懂了",
+}
+CASUAL_FAREWELL = {
+    "再见", "拜拜", "bye", "byebye", "bye bye", "goodbye",
+    "下次见", "回见", "走了", "先走了",
+}
+CASUAL_PRAISE = {
+    "厉害", "牛", "不错", "很棒", "真棒", "太棒了",
+    "666", "nb", "yyds", "可以的", "行",
+}
+CASUAL_PUNCTUATION_RE = re.compile(r"[\s,，。.!！?？~～、]+")
+
+
+def build_prompt(question: str, context_items: list[dict]) -> str:
+    if context_items:
+        context = "\n\n".join(
+            (
+                f"[{index}] {item['title']}（{item.get('category', '未分类')}，"
+                f"来源：{item.get('source') or '校内知识库'}）\n{item['content']}"
+            )
+            for index, item in enumerate(context_items, start=1)
+        )
+    else:
+        context = "未检索到相关知识。"
+
+    return f"""你是高校校园服务智能问答助手。
+你的任务是根据提供的校园知识库内容，回答学生、教师或工作人员的问题。
+
+请遵守以下规则：
+1. 优先根据知识库内容回答。
+2. 如果知识库中没有明确答案，请说明"当前知识库中没有找到明确依据"，不要编造。
+3. 回答要简洁、清楚、适合校园服务场景。
+4. 涉及流程类问题时，尽量分步骤回答。
+5. 涉及地点、时间、电话、网址等信息时，要原样引用知识库内容。
+6. 回答末尾可以提示用户联系相关部门确认最新信息。
+7. 回答控制在 300 字以内，不要展开与问题无关的知识。
+
+知识库内容：
+{context}
+
+用户问题：
+{question}
+
+请生成回答："""
+
+
+def normalize_casual_message(question: str) -> str:
+    return CASUAL_PUNCTUATION_RE.sub("", question.strip().lower())
+
+
+def build_casual_answer(question: str) -> str | None:
+    normalized = normalize_casual_message(question)
+    if not normalized:
+        return "你好，我是校园问答助手。你可以问我选课、校园卡、图书馆、宿舍、奖助学金、就业、医疗、后勤报修、校园网络等问题。"
+
+    # 纯闲聊（精确匹配）才走快捷回复，含其他内容的放行给 LLM
+    if normalized in CASUAL_GREETINGS:
+        return "你好，我是校园问答助手。你可以问我选课、校园卡、图书馆、宿舍、奖助学金、就业、医疗、后勤报修、校园网络等问题。"
+
+    if normalized in CASUAL_THANKS:
+        return "不客气。我可以继续帮你查询校园服务事项，比如选课、校园卡、图书馆、宿舍、网络或后勤报修。"
+
+    if normalized in CASUAL_FAREWELL:
+        return "再见！如有校园服务问题随时回来问我。"
+
+    if normalized in CASUAL_PRAISE:
+        return "谢谢夸奖！有什么校园服务问题都可以问我。"
+
+    return None
+
+
+class RAGService:
+    def __init__(
+        self,
+        db: Session,
+        embedding_client: EmbeddingClient,
+        llm_client: LLMClient,
+        model_provider: str,
+        top_k: int,
+    ):
+        self.db = db
+        self.embedding_client = embedding_client
+        self.llm_client = llm_client
+        self.model_provider = model_provider
+        self.top_k = top_k
+
+    async def ask(self, question: str) -> dict:
+        casual_answer = build_casual_answer(question)
+        if casual_answer is not None:
+            record = create_qa_record(
+                self.db,
+                question=question,
+                answer=casual_answer,
+                retrieved_context=[],
+                model_provider=DIRECT_RESPONSE_PROVIDER,
+            )
+            return {
+                "answer": casual_answer,
+                "qa_record_id": record.id,
+                "retrieved_context": [],
+                "model_provider": DIRECT_RESPONSE_PROVIDER,
+            }
+
+        query_embedding = await self.embedding_client.embed(question)
+        knowledge_items = retrieve_similar_knowledge(self.db, query_embedding, self.top_k)
+        context_items = [
+            RetrievedKnowledge.model_validate(item).model_dump()
+            for item in knowledge_items
+        ]
+        prompt = build_prompt(question=question, context_items=context_items)
+        answer = await self.llm_client.chat(
+            [
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": prompt},
+            ]
+        )
+        record = create_qa_record(
+            self.db,
+            question=question,
+            answer=answer,
+            retrieved_context=context_items,
+            model_provider=self.model_provider,
+        )
+        return {
+            "answer": answer,
+            "qa_record_id": record.id,
+            "retrieved_context": context_items,
+            "model_provider": self.model_provider,
+        }
+
+    async def ask_stream(self, question: str) -> AsyncGenerator[str, None]:
+        """Stream the RAG answer as SSE events."""
+        casual_answer = build_casual_answer(question)
+        if casual_answer is not None:
+            metadata = {
+                "type": "metadata",
+                "retrieved_context": [],
+                "model_provider": DIRECT_RESPONSE_PROVIDER,
+            }
+            yield f"data: {json.dumps(metadata, ensure_ascii=False)}\n\n"
+            event = {"type": "chunk", "content": casual_answer}
+            yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
+            record = create_qa_record(
+                self.db,
+                question=question,
+                answer=casual_answer,
+                retrieved_context=[],
+                model_provider=DIRECT_RESPONSE_PROVIDER,
+            )
+            done = {"type": "done", "qa_record_id": record.id}
+            yield f"data: {json.dumps(done, ensure_ascii=False)}\n\n"
+            return
+
+        # 1. Retrieve relevant knowledge
+        query_embedding = await self.embedding_client.embed(question)
+        knowledge_items = retrieve_similar_knowledge(self.db, query_embedding, self.top_k)
+        context_items = [
+            RetrievedKnowledge.model_validate(item).model_dump()
+            for item in knowledge_items
+        ]
+
+        # 2. Send metadata event
+        metadata = {
+            "type": "metadata",
+            "retrieved_context": context_items,
+            "model_provider": self.model_provider,
+        }
+        yield f"data: {json.dumps(metadata, ensure_ascii=False)}\n\n"
+
+        # 3. Stream LLM answer
+        prompt = build_prompt(question=question, context_items=context_items)
+        messages = [
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": prompt},
+        ]
+        full_answer: list[str] = []
+        async for chunk in self.llm_client.chat_stream(messages):
+            full_answer.append(chunk)
+            event = {"type": "chunk", "content": chunk}
+            yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
+
+        # 4. Save QA record
+        answer_text = "".join(full_answer)
+        record = create_qa_record(
+            self.db,
+            question=question,
+            answer=answer_text,
+            retrieved_context=context_items,
+            model_provider=self.model_provider,
+        )
+
+        # 5. Send done event
+        done = {"type": "done", "qa_record_id": record.id}
+        yield f"data: {json.dumps(done, ensure_ascii=False)}\n\n"

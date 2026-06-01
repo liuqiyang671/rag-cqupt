@@ -1,0 +1,43 @@
+<h2>归档功能行为</h2>
+<p class="subtitle">归档的含义和表现方式</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>隐藏但保留</h3>
+      <p>归档的记录从主列表隐藏，但在专门的"归档"标签页中仍然可见，可以恢复</p>
+      <ul>
+        <li>✅ 可以恢复误归档的记录</li>
+        <li>✅ 不会意外丢失数据</li>
+        <li>⚠️ 需要额外的"归档"标签页</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>移到归档文件夹</h3>
+      <p>类似文件系统，归档的记录移到单独的"归档"区域，需要主动导航才能查看</p>
+      <ul>
+        <li>✅ 主列表保持简洁</li>
+        <li>✅ 归档记录集中管理</li>
+        <li>⚠️ 需要额外的导航入口</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>标记+筛选</h3>
+      <p>归档只是打个标记，通过筛选器切换显示/隐藏归档记录</p>
+      <ul>
+        <li>✅ 实现简单</li>
+        <li>✅ 灵活的查看方式</li>
+        <li>⚠️ 默认可能显示过多记录</li>
+      </ul>
+    </div>
+  </div>
+</div>

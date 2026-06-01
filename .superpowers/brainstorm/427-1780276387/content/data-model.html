@@ -1,0 +1,81 @@
+<h2>数据模型设计</h2>
+<p class="subtitle">扩展 QARecord 模型以支持删除和归档功能</p>
+
+<div class="section">
+  <h3>现有 QARecord 模型</h3>
+  <div class="mockup">
+    <div class="mockup-header">当前数据库表结构</div>
+    <div class="mockup-body">
+      <table style="width:100%; border-collapse: collapse;">
+        <tr style="background: #f0f0f0;">
+          <th style="padding: 8px; border: 1px solid #ddd;">字段</th>
+          <th style="padding: 8px; border: 1px solid #ddd;">类型</th>
+          <th style="padding: 8px; border: 1px solid #ddd;">说明</th>
+        </tr>
+        <tr>
+          <td style="padding: 8px; border: 1px solid #ddd;">id</td>
+          <td style="padding: 8px; border: 1px solid #ddd;">Integer</td>
+          <td style="padding: 8px; border: 1px solid #ddd;">主键</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px; border: 1px solid #ddd;">question</td>
+          <td style="padding: 8px; border: 1px solid #ddd;">Text</td>
+          <td style="padding: 8px; border: 1px solid #ddd;">用户问题</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px; border: 1px solid #ddd;">answer</td>
+          <td style="padding: 8px; border: 1px solid #ddd;">Text</td>
+          <td style="padding: 8px; border: 1px solid #ddd;">AI 回答</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px; border: 1px solid #ddd;">retrieved_context</td>
+          <td style="padding: 8px; border: 1px solid #ddd;">JSON</td>
+          <td style="padding: 8px; border: 1px solid #ddd;">检索到的知识</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px; border: 1px solid #ddd;">model_provider</td>
+          <td style="padding: 8px; border: 1px solid #ddd;">String(50)</td>
+          <td style="padding: 8px; border: 1px solid #ddd;">使用的模型</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px; border: 1px solid #ddd;">created_at</td>
+          <td style="padding: 8px; border: 1px solid #ddd;">DateTime</td>
+          <td style="padding: 8px; border: 1px solid #ddd;">创建时间</td>
+        </tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>新增字段</h3>
+  <div class="mockup">
+    <div class="mockup-header">扩展后的表结构</div>
+    <div class="mockup-body">
+      <table style="width:100%; border-collapse: collapse;">
+        <tr style="background: #f0f0f0;">
+          <th style="padding: 8px; border: 1px solid #ddd;">新增字段</th>
+          <th style="padding: 8px; border: 1px solid #ddd;">类型</th>
+          <th style="padding: 8px; border: 1px solid #ddd;">默认值</th>
+          <th style="padding: 8px; border: 1px solid #ddd;">说明</th>
+        </tr>
+        <tr>
+          <td style="padding: 8px; border: 1px solid #ddd;">status</td>
+          <td style="padding: 8px; border: 1px solid #ddd;">String(20)</td>
+          <td style="padding: 8px; border: 1px solid #ddd;">'active'</td>
+          <td style="padding: 8px; border: 1px solid #ddd;">状态：active/archived/deleted</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px; border: 1px solid #ddd;">updated_at</td>
+          <td style="padding: 8px; border: 1px solid #ddd;">DateTime</td>
+          <td style="padding: 8px; border: 1px solid #ddd;">created_at</td>
+          <td style="padding: 8px; border: 1px solid #ddd;">最后更新时间</td>
+        </tr>
+      </table>
+      <p style="margin-top: 12px; color: #666;">
+        <strong>设计说明：</strong>使用 status 字段而非多个布尔字段，更清晰地表达状态机。<br/>
+        <strong>状态流转：</strong>active → archived → deleted（硬删除）
+      </p>
+    </div>
+  </div>
+</div>

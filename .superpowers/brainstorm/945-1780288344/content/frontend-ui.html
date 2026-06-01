@@ -1,0 +1,186 @@
+<h2>前端 UI 设计</h2>
+<p class="subtitle">聊天页面侧边栏和独立历史页面的布局</p>
+
+<div class="section">
+  <h3>聊天页面布局（带侧边栏）</h3>
+  <div class="mockup">
+    <div class="mockup-header">聊天页面 - 侧边栏历史记录</div>
+    <div class="mockup-body">
+      <div style="display: flex; gap: 16px; height: 400px;">
+        <!-- 侧边栏 -->
+        <div style="width: 280px; background: #f8f9fa; border-radius: 8px; padding: 16px; overflow-y: auto;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+            <h4 style="margin: 0;">历史记录</h4>
+            <button style="background: #14745f; color: white; border: none; padding: 4px 12px; border-radius: 4px; cursor: pointer;">
+              查看全部
+            </button>
+          </div>
+
+          <!-- 搜索框 -->
+          <input
+            type="text"
+            placeholder="搜索历史..."
+            style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 12px; box-sizing: border-box;"
+          />
+
+          <!-- 历史列表 -->
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <div style="background: white; padding: 12px; border-radius: 6px; border-left: 3px solid #14745f; cursor: pointer;">
+              <div style="font-weight: 500; margin-bottom: 4px;">校园卡怎么挂失？</div>
+              <div style="font-size: 12px; color: #666;">2026-05-31 10:30</div>
+            </div>
+            <div style="background: white; padding: 12px; border-radius: 6px; border-left: 3px solid #14745f; cursor: pointer;">
+              <div style="font-weight: 500; margin-bottom: 4px;">图书馆开放时间</div>
+              <div style="font-size: 12px; color: #666;">2026-05-31 09:15</div>
+            </div>
+            <div style="background: white; padding: 12px; border-radius: 6px; border-left: 3px solid #14745f; cursor: pointer;">
+              <div style="font-weight: 500; margin-bottom: 4px;">宿舍报修流程</div>
+              <div style="font-size: 12px; color: #666;">2026-05-30 16:45</div>
+            </div>
+            <div style="background: white; padding: 12px; border-radius: 6px; border-left: 3px solid #ccc; cursor: pointer; opacity: 0.7;">
+              <div style="font-weight: 500; margin-bottom: 4px;">更多记录...</div>
+              <div style="font-size: 12px; color: #666;">点击"查看全部"</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 主聊天区域 -->
+        <div style="flex: 1; background: white; border-radius: 8px; padding: 16px; display: flex; flex-direction: column;">
+          <div style="flex: 1; overflow-y: auto;">
+            <!-- 用户消息 -->
+            <div style="display: flex; justify-content: flex-end; margin-bottom: 12px;">
+              <div style="background: #edf5ff; padding: 12px; border-radius: 8px; max-width: 70%;">
+                校园卡怎么挂失？
+              </div>
+            </div>
+            <!-- AI 回答 -->
+            <div style="display: flex; justify-content: flex-start; margin-bottom: 12px;">
+              <div style="background: #f8f9fa; padding: 12px; border-radius: 8px; max-width: 70%;">
+                校园卡挂失可以通过以下方式：<br/>
+                1. 登录校园卡管理系统...<br/>
+                2. 前往校园卡服务中心...
+              </div>
+            </div>
+          </div>
+          <!-- 输入框 -->
+          <div style="display: flex; gap: 8px; margin-top: 12px;">
+            <input
+              type="text"
+              placeholder="输入问题..."
+              style="flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 6px;"
+            />
+            <button style="background: #14745f; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer;">
+              发送
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>独立历史页面</h3>
+  <div class="mockup">
+    <div class="mockup-header">历史记录页面 - 完整功能</div>
+    <div class="mockup-body">
+      <div style="background: white; border-radius: 8px; padding: 24px;">
+        <!-- 页面标题和操作栏 -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+          <div>
+            <h2 style="margin: 0 0 8px 0;">历史记录</h2>
+            <p style="margin: 0; color: #666;">共 150 条记录</p>
+          </div>
+          <div style="display: flex; gap: 12px;">
+            <button style="background: #f0f0f0; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">
+              归档区 (23)
+            </button>
+            <button style="background: #ff4d4f; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">
+              批量删除
+            </button>
+          </div>
+        </div>
+
+        <!-- 筛选和搜索 -->
+        <div style="display: flex; gap: 12px; margin-bottom: 20px;">
+          <input
+            type="text"
+            placeholder="搜索问题或回答..."
+            style="flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 6px;"
+          />
+          <select style="padding: 10px; border: 1px solid #ddd; border-radius: 6px; min-width: 120px;">
+            <option>全部时间</option>
+            <option>今天</option>
+            <option>最近 7 天</option>
+            <option>最近 30 天</option>
+          </select>
+          <select style="padding: 10px; border: 1px solid #ddd; border-radius: 6px; min-width: 120px;">
+            <option>全部模型</option>
+            <option>DeepSeek</option>
+            <option>GPT-4</option>
+          </select>
+        </div>
+
+        <!-- 记录列表 -->
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          <div style="display: flex; align-items: center; padding: 16px; background: #f8f9fa; border-radius: 8px; gap: 16px;">
+            <input type="checkbox" style="width: 18px; height: 18px; accent-color: #14745f;" />
+            <div style="flex: 1;">
+              <div style="font-weight: 500; margin-bottom: 6px;">校园卡怎么挂失？</div>
+              <div style="font-size: 13px; color: #666; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                校园卡挂失可以通过以下方式：1. 登录校园卡管理系统... 2. 前往校园卡服务中心...
+              </div>
+              <div style="font-size: 12px; color: #999; margin-top: 6px;">
+                2026-05-31 10:30 · DeepSeek
+              </div>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <button style="background: #e6f7ff; color: #1890ff; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px;">
+                查看
+              </button>
+              <button style="background: #fff7e6; color: #fa8c16; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px;">
+                归档
+              </button>
+              <button style="background: #fff2f0; color: #ff4d4f; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px;">
+                删除
+              </button>
+            </div>
+          </div>
+
+          <div style="display: flex; align-items: center; padding: 16px; background: #f8f9fa; border-radius: 8px; gap: 16px;">
+            <input type="checkbox" style="width: 18px; height: 18px; accent-color: #14745f;" />
+            <div style="flex: 1;">
+              <div style="font-weight: 500; margin-bottom: 6px;">图书馆开放时间是什么？</div>
+              <div style="font-size: 13px; color: #666; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                图书馆开放时间为周一至周五 8:00-22:00，周末 9:00-21:00...
+              </div>
+              <div style="font-size: 12px; color: #999; margin-top: 6px;">
+                2026-05-31 09:15 · DeepSeek
+              </div>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <button style="background: #e6f7ff; color: #1890ff; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px;">
+                查看
+              </button>
+              <button style="background: #fff7e6; color: #fa8c16; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px;">
+                归档
+              </button>
+              <button style="background: #fff2f0; color: #ff4d4f; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px;">
+                删除
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 分页 -->
+        <div style="display: flex; justify-content: center; gap: 8px; margin-top: 24px;">
+          <button style="background: #14745f; color: white; border: none; padding: 8px 12px; border-radius: 4px;">1</button>
+          <button style="background: #f0f0f0; border: none; padding: 8px 12px; border-radius: 4px;">2</button>
+          <button style="background: #f0f0f0; border: none; padding: 8px 12px; border-radius: 4px;">3</button>
+          <button style="background: #f0f0f0; border: none; padding: 8px 12px; border-radius: 4px;">...</button>
+          <button style="background: #f0f0f0; border: none; padding: 8px 12px; border-radius: 4px;">8</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

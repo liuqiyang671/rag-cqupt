@@ -1,0 +1,130 @@
+<h2>实现方案选择</h2>
+<p class="subtitle">根据需求，我推荐以下三种实现方案</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>渐进式增强（推荐）</h3>
+      <p>分阶段实现，先完成核心功能，再逐步添加高级特性</p>
+
+      <h4>阶段 1：基础存储</h4>
+      <ul>
+        <li>✅ 页面加载时自动恢复历史记录</li>
+        <li>✅ 侧边栏显示最近 20 条记录</li>
+        <li>✅ 点击记录可查看详情</li>
+      </ul>
+
+      <h4>阶段 2：管理功能</h4>
+      <ul>
+        <li>✅ 删除功能（确认对话框）</li>
+        <li>✅ 归档功能（移到归档区）</li>
+        <li>✅ 独立历史页面（完整列表）</li>
+      </ul>
+
+      <h4>阶段 3：高级功能</h4>
+      <ul>
+        <li>✅ 搜索和筛选</li>
+        <li>✅ 分页加载</li>
+        <li>✅ 导出功能</li>
+      </ul>
+
+      <div class="pros-cons">
+        <div class="pros">
+          <h4>优点</h4>
+          <ul>
+            <li>风险最低，可逐步验证</li>
+            <li>用户可尽早使用核心功能</li>
+            <li>开发工作量可控</li>
+          </ul>
+        </div>
+        <div class="cons">
+          <h4>缺点</h4>
+          <ul>
+            <li>完整功能需要多个迭代</li>
+            <li>可能需要重构早期代码</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>完整实现</h3>
+      <p>一次性实现所有功能，包括侧边栏、独立页面、删除、归档、搜索</p>
+
+      <h4>功能清单</h4>
+      <ul>
+        <li>✅ 聊天页面侧边栏（最近记录）</li>
+        <li>✅ 独立历史页面（完整功能）</li>
+        <li>✅ 删除功能（确认对话框）</li>
+        <li>✅ 归档功能（归档区）</li>
+        <li>✅ 搜索和筛选</li>
+        <li>✅ 分页和无限滚动</li>
+      </ul>
+
+      <div class="pros-cons">
+        <div class="pros">
+          <h4>优点</h4>
+          <ul>
+            <li>功能完整，用户体验好</li>
+            <li>代码结构统一</li>
+            <li>一次开发，长期使用</li>
+          </ul>
+        </div>
+        <div class="cons">
+          <h4>缺点</h4>
+          <ul>
+            <li>开发周期长</li>
+            <li>风险较高（可能延期）</li>
+            <li>调试复杂度高</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>最小可行产品（MVP）</h3>
+      <p>只实现最核心功能：存储和查看，其他功能后续根据需求添加</p>
+
+      <h4>核心功能</h4>
+      <ul>
+        <li>✅ 页面加载时恢复历史记录</li>
+        <li>✅ 简单的历史列表（无侧边栏）</li>
+        <li>✅ 基础删除功能</li>
+      </ul>
+
+      <h4>暂不实现</h4>
+      <ul>
+        <li>❌ 归档功能</li>
+        <li>❌ 独立历史页面</li>
+        <li>❌ 搜索筛选</li>
+        <li>❌ 侧边栏</li>
+      </ul>
+
+      <div class="pros-cons">
+        <div class="pros">
+          <h4>优点</h4>
+          <ul>
+            <li>开发速度最快</li>
+            <li>验证核心需求</li>
+            <li>代码量最少</li>
+          </ul>
+        </div>
+        <div class="cons">
+          <h4>缺点</h4>
+          <ul>
+            <li>功能有限</li>
+            <li>用户体验一般</li>
+            <li>可能需要大幅重构</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

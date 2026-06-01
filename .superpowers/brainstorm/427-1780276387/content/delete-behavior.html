@@ -1,0 +1,46 @@
+<h2>删除功能行为</h2>
+<p class="subtitle">删除操作的安全性和确认方式</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>软删除 + 回收站</h3>
+      <p>删除的记录移到回收站，保留 30 天后自动彻底删除，期间可恢复</p>
+      <ul>
+        <li>✅ 防止误删</li>
+        <li>✅ 有后悔期</li>
+        <li>⚠️ 需要回收站功能</li>
+        <li>⚠️ 数据库需要额外字段</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>确认后硬删除</h3>
+      <p>弹出确认对话框，确认后直接从数据库删除，不可恢复</p>
+      <ul>
+        <li>✅ 实现简单</li>
+        <li>✅ 数据库干净</li>
+        <li>⚠️ 误删无法恢复</li>
+        <li>⚠️ 需要谨慎的确认提示</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>批量软删除</h3>
+      <p>支持多选后批量删除，删除的记录标记为已删除但保留，可在设置中恢复</p>
+      <ul>
+        <li>✅ 支持批量操作</li>
+        <li>✅ 可恢复</li>
+        <li>⚠️ UI 复杂度增加</li>
+        <li>⚠️ 需要设置页面管理</li>
+      </ul>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,120 @@
+<h2>API 接口设计</h2>
+<p class="subtitle">新增和修改的 API 端点</p>
+
+<div class="section">
+  <h3>现有 API</h3>
+  <div class="mockup">
+    <div class="mockup-header">当前已有的 API</div>
+    <div class="mockup-body">
+      <table style="width:100%; border-collapse: collapse;">
+        <tr style="background: #f0f0f0;">
+          <th style="padding: 8px; border: 1px solid #ddd;">方法</th>
+          <th style="padding: 8px; border: 1px solid #ddd;">路径</th>
+          <th style="padding: 8px; border: 1px solid #ddd;">说明</th>
+        </tr>
+        <tr>
+          <td style="padding: 8px; border: 1px solid #ddd;">POST</td>
+          <td style="padding: 8px; border: 1px solid #ddd;">/qa/ask</td>
+          <td style="padding: 8px; border: 1px solid #ddd;">同步问答</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px; border: 1px solid #ddd;">POST</td>
+          <td style="padding: 8px; border: 1px solid #ddd;">/qa/ask/stream</td>
+          <td style="padding: 8px; border: 1px solid #ddd;">流式问答</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px; border: 1px solid #ddd;">GET</td>
+          <td style="padding: 8px; border: 1px solid #ddd;">/qa/records</td>
+          <td style="padding: 8px; border: 1px solid #ddd;">获取历史记录（分页）</td>
+        </tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>新增 API</h3>
+  <div class="mockup">
+    <div class="mockup-header">需要新增的 API 端点</div>
+    <div class="mockup-body">
+      <table style="width:100%; border-collapse: collapse;">
+        <tr style="background: #f0f0f0;">
+          <th style="padding: 8px; border: 1px solid #ddd;">方法</th>
+          <th style="padding: 8px; border: 1px solid #ddd;">路径</th>
+          <th style="padding: 8px; border: 1px solid #ddd;">参数</th>
+          <th style="padding: 8px; border: 1px solid #ddd;">说明</th>
+        </tr>
+        <tr>
+          <td style="padding: 8px; border: 1px solid #ddd;">GET</td>
+          <td style="padding: 8px; border: 1px solid #ddd;">/qa/records</td>
+          <td style="padding: 8px; border: 1px solid #ddd;">?status=active&skip=0&limit=20</td>
+          <td style="padding: 8px; border: 1px solid #ddd;">修改：支持按状态筛选</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px; border: 1px solid #ddd;">PUT</td>
+          <td style="padding: 8px; border: 1px solid #ddd;">/qa/records/{id}/archive</td>
+          <td style="padding: 8px; border: 1px solid #ddd;">-</td>
+          <td style="padding: 8px; border: 1px solid #ddd;">归档记录</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px; border: 1px solid #ddd;">PUT</td>
+          <td style="padding: 8px; border: 1px solid #ddd;">/qa/records/{id}/restore</td>
+          <td style="padding: 8px; border: 1px solid #ddd;">-</td>
+          <td style="padding: 8px; border: 1px solid #ddd;">恢复归档记录</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px; border: 1px solid #ddd;">DELETE</td>
+          <td style="padding: 8px; border: 1px solid #ddd;">/qa/records/{id}</td>
+          <td style="padding: 8px; border: 1px solid #ddd;">-</td>
+          <td style="padding: 8px; border: 1px solid #ddd;">硬删除记录（确认后）</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px; border: 1px solid #ddd;">GET</td>
+          <td style="padding: 8px; border: 1px solid #ddd;">/qa/records/{id}</td>
+          <td style="padding: 8px; border: 1px solid #ddd;">-</td>
+          <td style="padding: 8px; border: 1px solid #ddd;">获取单条记录详情</td>
+        </tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>请求/响应格式</h3>
+  <div class="mockup">
+    <div class="mockup-header">API 响应示例</div>
+    <div class="mockup-body">
+      <pre style="background: #f5f5f5; padding: 12px; border-radius: 4px; overflow-x: auto;">
+// GET /qa/records?status=active&skip=0&limit=20
+{
+  "records": [
+    {
+      "id": 1,
+      "question": "校园卡怎么挂失？",
+      "answer": "校园卡挂失可以通过以下方式...",
+      "retrieved_context": [...],
+      "model_provider": "deepseek",
+      "status": "active",
+      "created_at": "2026-05-31T10:30:00Z",
+      "updated_at": "2026-05-31T10:30:00Z"
+    }
+  ],
+  "total": 150,
+  "skip": 0,
+  "limit": 20
+}
+
+// PUT /qa/records/1/archive
+// 响应：200 OK
+{
+  "id": 1,
+  "status": "archived",
+  "updated_at": "2026-05-31T11:00:00Z"
+}
+
+// DELETE /qa/records/1
+// 响应：204 No Content
+      </pre>
+    </div>
+  </div>
+</div>
