@@ -45,6 +45,10 @@ class Settings(BaseSettings):
     enable_query_decomposition: bool = Field(default=True, alias="ENABLE_QUERY_DECOMPOSITION")
     query_decomposition_max_sub_queries: int = Field(default=5, alias="QUERY_DECOMPOSITION_MAX_SUB_QUERIES")
 
+    # 模型容错配置
+    enable_fault_tolerance: bool = Field(default=True, alias="ENABLE_FAULT_TOLERANCE")
+    model_health_cache_ttl: int = Field(default=300, alias="MODEL_HEALTH_CACHE_TTL")
+
     model_config = SettingsConfigDict(
         env_file=(".env", "backend/.env"),
         env_file_encoding="utf-8",

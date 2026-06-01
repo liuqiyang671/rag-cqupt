@@ -191,3 +191,82 @@ def delete_record(record_id: int, db: Session = Depends(get_db)):
     if not success:
         raise HTTPException(status_code=404, detail="Record not found")
     return None
+
+
+@router.get("/models/health")
+async def get_model_health(
+    settings: Settings = Depends(get_settings),
+):
+    """
+    获取 LLM 模型的健康状态
+
+    返回所有配置的模型的健康状态信息，包括：
+    - 模型名称
+    - 是否健康
+    - 失败次数
+    - 成功次数
+    - 上次失败时间
+    """
+    from app.services.llm.fault_tolerant_client import FaultTolerantLLMClient
+
+    llm_client = get_llm_client(settings)
+
+    # 如果是容错客户端，返回健康状态
+    if isinstance(llm_client, FaultTolerantLLMClient):
+        return {
+            "status": "ok",
+            "models": llm_client.get_health_status(),
+        }
+
+    # 否则返回基本信息
+    return {
+        "status": "ok",
+        "models": {
+            "primary": {
+                "is_healthy": True,
+                "failure_count": 0,
+                "success_count": 0,
+                "last_failure_time": None,
+            }
+        },
+    }
+
+
+@router.post("/models/{model_name}/reset")
+async def reset_model_health(
+    model_name: str,
+    settings: Settings = Depends(get_settings),
+):
+    """
+    重置指定模型的健康状态
+
+    Args:
+        model_name: 模型名称（如 "primary:LocalLLMClient"）
+    """
+    from app.services.llm.fault_tolerant_client import FaultTolerantLLMClient
+
+    llm_client = get_llm_client(settings)
+
+    if not isinstance(llm_client, FaultTolerantLLMClient):
+        raise HTTPException(status_code=400, detail="Current LLM client does not support health management")
+
+    llm_client.reset_health(model_name)
+    return {"status": "ok", "message": f"Reset health for model: {model_name}"}
+
+
+@router.post("/models/reset-all")
+async def reset_all_model_health(
+    settings: Settings = Depends(get_settings),
+):
+    """
+    重置所有模型的健康状态
+    """
+    from app.services.llm.fault_tolerant_client import FaultTolerantLLMClient
+
+    llm_client = get_llm_client(settings)
+
+    if not isinstance(llm_client, FaultTolerantLLMClient):
+        raise HTTPException(status_code=400, detail="Current LLM client does not support health management")
+
+    llm_client.reset_health()
+    return {"status": "ok", "message": "Reset health for all models"}
