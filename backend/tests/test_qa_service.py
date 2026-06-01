@@ -8,6 +8,7 @@ from app.services.qa_service import (
     create_qa_record,
     list_qa_records,
     get_qa_record,
+    count_qa_records,
     archive_qa_record,
     restore_qa_record,
     delete_qa_record,
@@ -86,3 +87,32 @@ def test_get_qa_record(db_session):
     fetched = get_qa_record(db_session, record.id)
     assert fetched.id == record.id
     assert fetched.question == "q1"
+
+
+def test_count_qa_records(db_session):
+    create_qa_record(db_session, "q1", "a1", [], "deepseek")
+    create_qa_record(db_session, "q2", "a2", [], "deepseek")
+    record3 = create_qa_record(db_session, "q3", "a3", [], "deepseek")
+    archive_qa_record(db_session, record3.id)
+    assert count_qa_records(db_session, status="active") == 2
+    assert count_qa_records(db_session, status="archived") == 1
+
+
+def test_get_qa_record_not_found(db_session):
+    result = get_qa_record(db_session, 999)
+    assert result is None
+
+
+def test_archive_qa_record_not_found(db_session):
+    result = archive_qa_record(db_session, 999)
+    assert result is None
+
+
+def test_restore_qa_record_not_found(db_session):
+    result = restore_qa_record(db_session, 999)
+    assert result is None
+
+
+def test_delete_qa_record_not_found(db_session):
+    result = delete_qa_record(db_session, 999)
+    assert result is False
