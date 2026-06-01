@@ -198,6 +198,7 @@ class RAGService:
         model_provider: str,
         top_k: int,
         enable_query_rewriting: bool = True,
+        enable_query_decomposition: bool = True,
     ):
         self.db = db
         self.embedding_client = embedding_client
@@ -205,11 +206,15 @@ class RAGService:
         self.model_provider = model_provider
         self.top_k = top_k
         self.enable_query_rewriting = enable_query_rewriting
+        self.enable_query_decomposition = enable_query_decomposition
 
-        # 初始化问题重写器
-        if enable_query_rewriting:
-            from app.services.query_rewriting import QueryRewriter, MultiQueryRetriever
-            self.query_rewriter = QueryRewriter(llm_client, max_queries=3)
+        # 初始化问题重写器和问题拆分器
+        if enable_query_rewriting or enable_query_decomposition:
+            from app.services.query_rewriting import QueryRewriter, QueryDecomposer, MultiQueryRetriever
+            if enable_query_rewriting:
+                self.query_rewriter = QueryRewriter(llm_client, max_queries=3)
+            if enable_query_decomposition:
+                self.query_decomposer = QueryDecomposer(llm_client, max_sub_queries=5)
             self.multi_query_retriever = MultiQueryRetriever(
                 db=db,
                 embedding_client=embedding_client,
@@ -254,10 +259,26 @@ class RAGService:
                 "conversation_summary": conversation.summary,
             }
 
-        # 问题重写 + 多查询检索
+        # 问题拆分 + 问题重写 + 多查询检索
+        all_queries = []
+
+        # 1. 问题拆分（如果启用）
+        if self.enable_query_decomposition:
+            sub_queries = await self.query_decomposer.decompose_query(question)
+        else:
+            sub_queries = [question]
+
+        # 2. 对每个子问题进行问题重写（如果启用）
         if self.enable_query_rewriting:
-            queries = await self.query_rewriter.rewrite_query(question)
-            context_items = await self.multi_query_retriever.retrieve(queries)
+            for sub_query in sub_queries:
+                rewritten = await self.query_rewriter.rewrite_query(sub_query)
+                all_queries.extend(rewritten)
+        else:
+            all_queries = sub_queries
+
+        # 3. 多查询检索
+        if all_queries:
+            context_items = await self.multi_query_retriever.retrieve(all_queries)
         else:
             query_embedding = await self.embedding_client.embed(question)
             context_items = retrieve_hybrid_knowledge(self.db, question, query_embedding, self.top_k)
@@ -329,10 +350,26 @@ class RAGService:
                 yield f"data: {json.dumps(done, ensure_ascii=False)}\n\n"
                 return
 
-            # 1. Retrieve relevant knowledge (with query rewriting if enabled)
+            # 1. Retrieve relevant knowledge (with query decomposition + rewriting if enabled)
+            all_queries = []
+
+            # 问题拆分（如果启用）
+            if self.enable_query_decomposition:
+                sub_queries = await self.query_decomposer.decompose_query(question)
+            else:
+                sub_queries = [question]
+
+            # 对每个子问题进行问题重写（如果启用）
             if self.enable_query_rewriting:
-                queries = await self.query_rewriter.rewrite_query(question)
-                context_items = await self.multi_query_retriever.retrieve(queries)
+                for sub_query in sub_queries:
+                    rewritten = await self.query_rewriter.rewrite_query(sub_query)
+                    all_queries.extend(rewritten)
+            else:
+                all_queries = sub_queries
+
+            # 多查询检索
+            if all_queries:
+                context_items = await self.multi_query_retriever.retrieve(all_queries)
             else:
                 query_embedding = await self.embedding_client.embed(question)
                 context_items = retrieve_hybrid_knowledge(self.db, question, query_embedding, self.top_k)

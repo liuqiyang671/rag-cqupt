@@ -3,7 +3,9 @@
     "allow": [
       "Bash(python -m pytest tests/test_query_rewriting.py -v)",
       "Bash(.venv/Scripts/python -m pytest tests/test_query_rewriting.py -v)",
-      "Bash(.venv/Scripts/pip install *)"
+      "Bash(.venv/Scripts/pip install *)",
+      "Bash(git commit -m 'feat: implement query rewriting for improved retrieval *)",
+      "Bash(git push *)"
     ]
   }
 }

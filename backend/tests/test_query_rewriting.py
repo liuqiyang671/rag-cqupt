@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from app.services.query_rewriting import QueryRewriter, MultiQueryRetriever
+from app.services.query_rewriting import QueryRewriter, QueryDecomposer, MultiQueryRetriever
 
 
 @pytest.fixture
@@ -212,3 +212,83 @@ class TestMultiQueryRetriever:
         deduplicated = retriever._deduplicate_and_rerank([])
 
         assert len(deduplicated) == 0
+
+
+class TestQueryDecomposer:
+    """测试 QueryDecomposer 类"""
+
+    @pytest.fixture
+    def decomposer(self, mock_llm_client):
+        """创建问题拆分器实例"""
+        return QueryDecomposer(mock_llm_client, max_sub_queries=5)
+
+    @pytest.mark.asyncio
+    async def test_decompose_multiple_questions(self, decomposer, mock_llm_client):
+        """测试拆分多个问题"""
+        mock_llm_client.chat.return_value = "校园卡怎么挂失\n图书馆开放时间是什么\n宿舍怎么报修"
+        queries = await decomposer.decompose_query("校园卡怎么挂失？图书馆开放时间是什么？宿舍怎么报修？")
+
+        assert len(queries) == 3
+        assert "校园卡怎么挂失" in queries
+        assert "图书馆开放时间是什么" in queries
+        assert "宿舍怎么报修" in queries
+
+    @pytest.mark.asyncio
+    async def test_decompose_single_question(self, decomposer, mock_llm_client):
+        """测试单个问题不拆分"""
+        mock_llm_client.chat.return_value = "校园卡丢了怎么办"
+        queries = await decomposer.decompose_query("校园卡丢了怎么办")
+
+        assert len(queries) == 1
+        assert queries[0] == "校园卡丢了怎么办"
+
+    @pytest.mark.asyncio
+    async def test_decompose_short_input(self, decomposer, mock_llm_client):
+        """测试短输入不拆分"""
+        queries = await decomposer.decompose_query("你好")
+
+        assert len(queries) == 1
+        assert queries[0] == "你好"
+
+    @pytest.mark.asyncio
+    async def test_decompose_llm_failure(self, decomposer, mock_llm_client):
+        """测试 LLM 调用失败时的降级处理"""
+        mock_llm_client.chat.side_effect = Exception("LLM service unavailable")
+        queries = await decomposer.decompose_query("校园卡怎么挂失？图书馆开放时间是什么？")
+
+        # 失败时应该返回原始查询
+        assert len(queries) == 1
+        assert queries[0] == "校园卡怎么挂失？图书馆开放时间是什么？"
+
+    @pytest.mark.asyncio
+    async def test_decompose_max_sub_queries(self, decomposer, mock_llm_client):
+        """测试子问题数量限制"""
+        mock_llm_client.chat.return_value = "问题1\n问题2\n问题3\n问题4\n问题5\n问题6\n问题7"
+        queries = await decomposer.decompose_query("问题1？问题2？问题3？问题4？问题5？问题6？问题7？")
+
+        # 应该限制为 max_sub_queries=5
+        assert len(queries) == 5
+
+    def test_parse_response_with_numbers(self, decomposer):
+        """测试解析带序号的响应"""
+        response = "1. 校园卡怎么挂失\n2. 图书馆开放时间是什么\n3. 宿舍怎么报修"
+        queries = decomposer._parse_response(response)
+
+        assert len(queries) == 3
+        assert "校园卡怎么挂失" in queries
+        assert "图书馆开放时间是什么" in queries
+        assert "宿舍怎么报修" in queries
+
+    def test_parse_response_without_numbers(self, decomposer):
+        """测试解析不带序号的响应"""
+        response = "校园卡怎么挂失\n图书馆开放时间是什么\n宿舍怎么报修"
+        queries = decomposer._parse_response(response)
+
+        assert len(queries) == 3
+
+    def test_parse_response_empty_lines(self, decomposer):
+        """测试解析包含空行的响应"""
+        response = "校园卡怎么挂失\n\n图书馆开放时间是什么\n\n"
+        queries = decomposer._parse_response(response)
+
+        assert len(queries) == 2

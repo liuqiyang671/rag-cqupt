@@ -41,6 +41,10 @@ class Settings(BaseSettings):
     enable_query_rewriting: bool = Field(default=True, alias="ENABLE_QUERY_REWRITING")
     query_rewriting_max_queries: int = Field(default=3, alias="QUERY_REWRITING_MAX_QUERIES")
 
+    # 问题拆分配置
+    enable_query_decomposition: bool = Field(default=True, alias="ENABLE_QUERY_DECOMPOSITION")
+    query_decomposition_max_sub_queries: int = Field(default=5, alias="QUERY_DECOMPOSITION_MAX_SUB_QUERIES")
+
     model_config = SettingsConfigDict(
         env_file=(".env", "backend/.env"),
         env_file_encoding="utf-8",
