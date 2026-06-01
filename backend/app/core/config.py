@@ -15,7 +15,7 @@ class Settings(BaseSettings):
 
     model_provider: str = Field(default="local", alias="MODEL_PROVIDER")
     local_llm_base_url: str = Field(default="http://localhost:11434", alias="LOCAL_LLM_BASE_URL")
-    local_llm_model: str = Field(default="qwen2.5:7b", alias="LOCAL_LLM_MODEL")
+    local_llm_model: str = Field(default="qwen3.5:9b", alias="LOCAL_LLM_MODEL")
 
     siliconflow_api_key: str = Field(default="", alias="SILICONFLOW_API_KEY")
     siliconflow_base_url: str = Field(default="https://api.siliconflow.cn/v1", alias="SILICONFLOW_BASE_URL")
