@@ -10,7 +10,7 @@ import { KnowledgePage } from './pages/KnowledgePage';
 import { LoginPage } from './pages/LoginPage';
 import type { User } from './types';
 
-const { Header, Content } = Layout;
+const { Sider, Content } = Layout;
 
 function AppShell() {
   const location = useLocation();
@@ -45,7 +45,7 @@ function AppShell() {
 
   return (
     <Layout className="app-shell">
-      <Header className="app-header">
+      <Sider className="app-sidebar" width={256}>
         <div className="brand">
           <div className="brand-mark">校</div>
           <div>
@@ -54,7 +54,8 @@ function AppShell() {
           </div>
         </div>
         <Menu
-          mode="horizontal"
+          className="main-nav"
+          mode="inline"
           selectedKeys={[location.pathname]}
           onClick={({ key }) => navigate(key)}
           items={[
@@ -65,18 +66,19 @@ function AppShell() {
           ]}
         />
         <div className="user-info">
-          <Typography.Text>{user ? user.nickname || user.username : '访客模式'}</Typography.Text>
+          <Typography.Text type="secondary">当前用户</Typography.Text>
+          <Typography.Text strong>{user ? user.nickname || user.username : '访客模式'}</Typography.Text>
           {user ? (
-            <Button size="small" onClick={handleLogout}>
+            <Button block size="small" onClick={handleLogout}>
               登出
             </Button>
           ) : (
-            <Button size="small" onClick={() => navigate('/login')}>
+            <Button block size="small" onClick={() => navigate('/login')}>
               登录
             </Button>
           )}
         </div>
-      </Header>
+      </Sider>
       <Content className="app-content">
         <Routes>
           <Route path="/" element={<ChatPage />} />

@@ -1,7 +1,7 @@
-import { Input, List, Tag, Typography, Button, Spin, Empty } from 'antd';
+import { Input, List, Tag, Typography, Button, Spin, Empty, Popconfirm, message } from 'antd';
 import { SearchOutlined, HistoryOutlined } from '@ant-design/icons';
 import { useEffect, useState } from 'react';
-import { getQARecords } from '../api/qa';
+import { archiveRecord, deleteRecord, getQARecords } from '../api/qa';
 import type { QARecord } from '../types';
 
 interface HistorySidebarProps {
@@ -13,7 +13,9 @@ interface HistorySidebarProps {
 export function HistorySidebar({ onSelectRecord, onViewAll, currentRecordId }: HistorySidebarProps) {
   const [records, setRecords] = useState<QARecord[]>([]);
   const [loading, setLoading] = useState(false);
+  const [actionRecordId, setActionRecordId] = useState<number | null>(null);
   const [searchText, setSearchText] = useState('');
+  const [messageApi, contextHolder] = message.useMessage();
 
   useEffect(() => {
     loadRecords();
@@ -31,6 +33,34 @@ export function HistorySidebar({ onSelectRecord, onViewAll, currentRecordId }: H
     }
   }
 
+  async function handleArchive(recordId: number) {
+    setActionRecordId(recordId);
+    try {
+      await archiveRecord(recordId);
+      setRecords(current => current.filter(record => record.id !== recordId));
+      messageApi.success('已归档');
+    } catch (error) {
+      console.error('Failed to archive record:', error);
+      messageApi.error('归档失败，请稍后重试');
+    } finally {
+      setActionRecordId(null);
+    }
+  }
+
+  async function handleDelete(recordId: number) {
+    setActionRecordId(recordId);
+    try {
+      await deleteRecord(recordId);
+      setRecords(current => current.filter(record => record.id !== recordId));
+      messageApi.success('已删除');
+    } catch (error) {
+      console.error('Failed to delete record:', error);
+      messageApi.error('删除失败，请稍后重试');
+    } finally {
+      setActionRecordId(null);
+    }
+  }
+
   const filteredRecords = searchText
     ? records.filter(r =>
         r.question.toLowerCase().includes(searchText.toLowerCase()) ||
@@ -40,6 +70,7 @@ export function HistorySidebar({ onSelectRecord, onViewAll, currentRecordId }: H
 
   return (
     <div className="history-sidebar">
+      {contextHolder}
       <div className="history-sidebar-header">
         <Typography.Title level={5} style={{ margin: 0 }}>
           <HistoryOutlined /> 历史记录
@@ -96,6 +127,28 @@ export function HistorySidebar({ onSelectRecord, onViewAll, currentRecordId }: H
                       minute: '2-digit'
                     })}
                   </Typography.Text>
+                </div>
+                <div className="history-record-actions" onClick={event => event.stopPropagation()}>
+                  <Button
+                    type="link"
+                    size="small"
+                    loading={actionRecordId === record.id}
+                    onClick={() => void handleArchive(record.id)}
+                  >
+                    归档
+                  </Button>
+                  <Popconfirm
+                    title="删除这条历史记录？"
+                    description="删除后不可恢复。"
+                    okText="删除"
+                    cancelText="取消"
+                    okButtonProps={{ danger: true }}
+                    onConfirm={() => void handleDelete(record.id)}
+                  >
+                    <Button danger type="link" size="small" loading={actionRecordId === record.id}>
+                      删除
+                    </Button>
+                  </Popconfirm>
                 </div>
               </div>
             )}
