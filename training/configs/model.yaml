@@ -1,0 +1,18 @@
+# Base model configuration
+model:
+  # Hugging Face model ID (training source - NEVER use Ollama for training)
+  hf_model_id: "Qwen/Qwen3.5-9B"
+  # Local path after download
+  local_dir: "models/Qwen3.5-9B"
+  # Fallback model if 9B causes OOM on 16GB GPU
+  fallback_model_id: "Qwen/Qwen3.5-4B"
+  fallback_local_dir: "models/Qwen3.5-4B"
+  # Trust remote code for Qwen models
+  trust_remote_code: true
+  # Default dtype
+  torch_dtype: "bfloat16"
+
+# Ollama deployment (only for final deployment, NOT for training)
+ollama:
+  model_name: "qwen35-campus:9b"
+  base_model_tag: "qwen3.5:9b"

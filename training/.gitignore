@@ -1,0 +1,40 @@
+# Data files (large, not for version control)
+data/generated/
+data/processed/
+data/eval/
+!data/raw/campus_kb.example.jsonl
+
+# Model files (very large)
+models/
+*.safetensors
+*.bin
+*.gguf
+*.pt
+*.pth
+
+# Training outputs
+saves/
+outputs/
+
+# Virtual environment
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# Environment variables
+.env
+
+# Logs
+*.log
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db

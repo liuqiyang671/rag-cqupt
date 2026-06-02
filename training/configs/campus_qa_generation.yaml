@@ -1,0 +1,51 @@
+# Campus QA generation configuration
+generation:
+  # Input knowledge base
+  input_kb_path: "data/raw/campus_kb.example.jsonl"
+  # Output path
+  output_path: "data/generated/campus_qa_generated.jsonl"
+  # Target number of QA pairs per knowledge entry
+  qa_per_entry_min: 3
+  qa_per_entry_max: 6
+  # Target total
+  target_total_min: 300
+  target_total_max: 500
+
+  # Generation backend: "api" or "local"
+  backend: "api"
+
+  # API config (read from env vars, not hardcoded)
+  api:
+    # These will be read from environment variables:
+    # SILICONFLOW_API_KEY, SILICONFLOW_BASE_URL, SILICONFLOW_MODEL
+    max_retries: 3
+    retry_delay: 2.0
+    timeout: 60
+    temperature: 0.8
+    max_tokens: 1024
+
+  # Local model config (alternative)
+  local:
+    model_path: "models/Qwen3.5-9B"
+    max_new_tokens: 512
+    temperature: 0.8
+
+  # QA types to generate
+  qa_types:
+    - "single_turn"        # Single-turn campus Q&A
+    - "multi_turn"         # Multi-turn follow-up
+    - "rag_qa"             # RAG-style with context
+    - "process_qa"         # Process/workflow Q&A
+    - "tool_call"          # Intent recognition / tool calling
+    - "reject"             # Uncertain/rejection samples
+
+  # Deduplication
+  dedup:
+    enabled: true
+    similarity_threshold: 0.85
+
+  # Validation
+  validation:
+    check_messages: true
+    check_non_empty: true
+    check_no_fake_contact: true

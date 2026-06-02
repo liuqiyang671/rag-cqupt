@@ -1,0 +1,65 @@
+# QLoRA training configuration for Qwen3.5-9B on RTX 5060 Ti 16GB
+# Conservative settings to avoid OOM
+
+model:
+  model_name_or_path: "models/Qwen3.5-9B"
+  trust_remote_code: true
+  torch_dtype: "bfloat16"
+
+# QLoRA quantization config
+quantization:
+  load_in_4bit: true
+  bnb_4bit_quant_type: "nf4"
+  bnb_4bit_use_double_quant: true
+  bnb_4bit_compute_dtype: "bfloat16"
+
+# LoRA config
+lora:
+  r: 8
+  alpha: 16
+  dropout: 0.05
+  target_modules:
+    - "q_proj"
+    - "k_proj"
+    - "v_proj"
+    - "o_proj"
+    - "gate_proj"
+    - "up_proj"
+    - "down_proj"
+  bias: "none"
+  task_type: "CAUSAL_LM"
+
+# Dataset
+data:
+  train_file: "data/processed/campus_sft_train.jsonl"
+  validation_file: "data/processed/campus_sft_valid.jsonl"
+  max_seq_length: 1024
+
+# Training hyperparameters
+training:
+  output_dir: "saves/lora/qwen35_9b_campus_lora"
+  per_device_train_batch_size: 1
+  per_device_eval_batch_size: 1
+  gradient_accumulation_steps: 16
+  learning_rate: 2.0e-4
+  num_train_epochs: 2
+  lr_scheduler_type: "cosine"
+  warmup_ratio: 0.1
+  weight_decay: 0.01
+  logging_steps: 10
+  save_steps: 100
+  save_total_limit: 3
+  eval_steps: 100
+  gradient_checkpointing: true
+  fp16: false
+  bf16: true
+  seed: 42
+  report_to: "none"
+  dataloader_num_workers: 0
+  remove_unused_columns: false
+
+# Estimated VRAM usage notes:
+# - Qwen3.5-9B 4-bit NF4: ~6GB base
+# - With LoRA r=8 + gradient checkpointing: ~10-12GB total
+# - RTX 5060 Ti 16GB should fit with these settings
+# - If OOM: reduce max_seq_length to 512 or switch to Qwen3.5-4B

@@ -1,0 +1,11 @@
+# LoRA merge configuration
+merge:
+  base_model_path: "models/Qwen3.5-9B"
+  lora_adapter_path: "saves/lora/qwen35_9b_campus_lora"
+  output_dir: "saves/merged/qwen35_9b_campus_merged"
+  # Must use non-quantized model for merging
+  torch_dtype: "bfloat16"
+  trust_remote_code: true
+  # Save tokenizer and config along with merged model
+  save_tokenizer: true
+  save_config: true

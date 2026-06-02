@@ -1,0 +1,15 @@
+# MMLU-Pro evaluation configuration
+eval:
+  task: "mmlu_pro"
+  # quick mode: limit samples for fast check; full mode: remove limit
+  limit: 100
+  num_fewshot: 0
+  batch_size: "auto"
+  output_dir: "outputs/mmlu_base"
+
+model:
+  # Path to HF model (local dir or HF hub ID)
+  model_path: "models/Qwen3.5-9B"
+  model_args:
+    trust_remote_code: true
+    dtype: "bfloat16"

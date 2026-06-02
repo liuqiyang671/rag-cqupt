@@ -1,0 +1,12 @@
+# GGUF export configuration
+gguf:
+  # Path to llama.cpp directory (must be cloned and built separately)
+  llama_cpp_path: "llama.cpp"
+  # Source merged HF model
+  source_model_path: "saves/merged/qwen35_9b_campus_merged"
+  output_dir: "saves/gguf"
+  # Output filenames
+  f16_output: "qwen35_9b_campus_f16.gguf"
+  q4km_output: "qwen35_9b_campus_q4_k_m.gguf"
+  # Quantization type for final export
+  quant_type: "Q4_K_M"
