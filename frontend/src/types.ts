@@ -46,6 +46,18 @@ export interface KnowledgeImportResponse {
   items: KnowledgeItem[];
 }
 
+export interface KnowledgeCategoryStats {
+  category: string;
+  item_count: number;
+  document_count: number;
+  chunk_count: number;
+}
+
+export interface KnowledgeStatsResponse {
+  categories: KnowledgeCategoryStats[];
+  total_items: number;
+}
+
 export interface AskResponse {
   answer: string;
   qa_record_id: number;

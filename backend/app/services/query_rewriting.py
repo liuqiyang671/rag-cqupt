@@ -13,6 +13,7 @@ from typing import List
 
 from sqlalchemy.orm import Session
 
+from app.core.ai_errors import AIServiceError
 from app.services.embedding.base import EmbeddingClient
 from app.services.llm.base import LLMClient
 from app.services.retrieval_service import retrieve_hybrid_knowledge
@@ -272,6 +273,8 @@ class MultiQueryRetriever:
                 )
 
                 all_results.extend(results)
+            except AIServiceError:
+                raise
             except Exception as e:
                 logger.warning(f"Retrieval failed for query '{query}': {e}")
                 continue

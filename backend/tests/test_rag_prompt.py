@@ -54,6 +54,14 @@ def test_build_prompt_includes_campus_rules_context_and_question():
     assert "校园卡丢了怎么办？" in prompt
 
 
+def test_build_prompt_without_context_tells_model_not_to_emit_references():
+    prompt = build_prompt(question="今天中午吃什么？", context_items=[])
+
+    assert "未检索到相关知识" in prompt
+    assert "不要输出引用编号" in prompt
+    assert "不要列出引用来源" in prompt
+
+
 def test_build_casual_answer_handles_greeting_without_rag_template():
     answer = build_casual_answer("你好")
 
@@ -80,6 +88,14 @@ def test_normalize_answer_references_keeps_existing_reference_paragraph():
     normalized = normalize_answer_references(answer)
 
     assert normalized == answer
+
+
+def test_normalize_answer_references_removes_reference_section_without_context():
+    answer = "当前知识库中没有找到明确依据。建议查看学校后勤官网获取今日菜单信息。\n\n引用来源："
+
+    normalized = normalize_answer_references(answer, has_context=False)
+
+    assert normalized == "当前知识库中没有找到明确依据。建议查看学校后勤官网获取今日菜单信息。"
 
 
 def test_rag_service_answers_casual_greeting_without_retrieval_or_llm(tmp_path):

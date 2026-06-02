@@ -85,6 +85,11 @@ def build_prompt(
         )
     else:
         context = "未检索到相关知识。"
+    reference_rule = (
+        "9. 回答末尾列出引用来源，格式为“引用来源：[1] 标题 - 来源”，且“引用来源”前必须空一行。"
+        if context_items
+        else "9. 本次未检索到可引用的知识库内容，不要输出引用编号，不要列出引用来源。"
+    )
 
     summary = conversation_summary.strip() or "暂无会话摘要。"
     recent_context = format_recent_turns(recent_turns or [])
@@ -101,7 +106,7 @@ def build_prompt(
 6. 回答末尾可以提示用户联系相关部门确认最新信息。
 7. 回答控制在 300 字以内，不要展开与问题无关的知识。
 8. 使用引用编号标注依据，例如“需要先挂失[1]”。
-9. 回答末尾列出引用来源，格式为“引用来源：[1] 标题 - 来源”，且“引用来源”前必须空一行。
+{reference_rule}
 
 会话摘要：
 {summary}
@@ -122,13 +127,16 @@ def normalize_casual_message(question: str) -> str:
     return CASUAL_PUNCTUATION_RE.sub("", question.strip().lower())
 
 
-def normalize_answer_references(answer: str) -> str:
+def normalize_answer_references(answer: str, *, has_context: bool = True) -> str:
     """Ensure the final reference source list starts as a separate paragraph."""
     match = REFERENCE_SOURCE_RE.search(answer)
     if not match:
         return answer
 
     prefix = answer[: match.start()].rstrip()
+    if not has_context:
+        return prefix
+
     suffix = answer[match.start() :].lstrip()
     if not prefix:
         return suffix
@@ -259,26 +267,29 @@ class RAGService:
                 "conversation_summary": conversation.summary,
             }
 
-        # 问题拆分 + 问题重写 + 多查询检索
-        all_queries = []
+        if self.enable_query_decomposition or self.enable_query_rewriting:
+            all_queries = []
 
-        # 1. 问题拆分（如果启用）
-        if self.enable_query_decomposition:
-            sub_queries = await self.query_decomposer.decompose_query(question)
-        else:
-            sub_queries = [question]
+            # 1. 问题拆分（如果启用）
+            if self.enable_query_decomposition:
+                sub_queries = await self.query_decomposer.decompose_query(question)
+            else:
+                sub_queries = [question]
 
-        # 2. 对每个子问题进行问题重写（如果启用）
-        if self.enable_query_rewriting:
-            for sub_query in sub_queries:
-                rewritten = await self.query_rewriter.rewrite_query(sub_query)
-                all_queries.extend(rewritten)
-        else:
-            all_queries = sub_queries
+            # 2. 对每个子问题进行问题重写（如果启用）
+            if self.enable_query_rewriting:
+                for sub_query in sub_queries:
+                    rewritten = await self.query_rewriter.rewrite_query(sub_query)
+                    all_queries.extend(rewritten)
+            else:
+                all_queries = sub_queries
 
-        # 3. 多查询检索
-        if all_queries:
-            context_items = await self.multi_query_retriever.retrieve(all_queries)
+            # 3. 多查询检索
+            if all_queries:
+                context_items = await self.multi_query_retriever.retrieve(all_queries)
+            else:
+                query_embedding = await self.embedding_client.embed(question)
+                context_items = retrieve_hybrid_knowledge(self.db, question, query_embedding, self.top_k)
         else:
             query_embedding = await self.embedding_client.embed(question)
             context_items = retrieve_hybrid_knowledge(self.db, question, query_embedding, self.top_k)
@@ -294,7 +305,7 @@ class RAGService:
                 {"role": "user", "content": prompt},
             ]
         )
-        answer = normalize_answer_references(answer)
+        answer = normalize_answer_references(answer, has_context=bool(context_items))
         record = create_qa_record(
             self.db,
             question=question,
@@ -351,25 +362,29 @@ class RAGService:
                 return
 
             # 1. Retrieve relevant knowledge (with query decomposition + rewriting if enabled)
-            all_queries = []
+            if self.enable_query_decomposition or self.enable_query_rewriting:
+                all_queries = []
 
-            # 问题拆分（如果启用）
-            if self.enable_query_decomposition:
-                sub_queries = await self.query_decomposer.decompose_query(question)
-            else:
-                sub_queries = [question]
+                # 问题拆分（如果启用）
+                if self.enable_query_decomposition:
+                    sub_queries = await self.query_decomposer.decompose_query(question)
+                else:
+                    sub_queries = [question]
 
-            # 对每个子问题进行问题重写（如果启用）
-            if self.enable_query_rewriting:
-                for sub_query in sub_queries:
-                    rewritten = await self.query_rewriter.rewrite_query(sub_query)
-                    all_queries.extend(rewritten)
-            else:
-                all_queries = sub_queries
+                # 对每个子问题进行问题重写（如果启用）
+                if self.enable_query_rewriting:
+                    for sub_query in sub_queries:
+                        rewritten = await self.query_rewriter.rewrite_query(sub_query)
+                        all_queries.extend(rewritten)
+                else:
+                    all_queries = sub_queries
 
-            # 多查询检索
-            if all_queries:
-                context_items = await self.multi_query_retriever.retrieve(all_queries)
+                # 多查询检索
+                if all_queries:
+                    context_items = await self.multi_query_retriever.retrieve(all_queries)
+                else:
+                    query_embedding = await self.embedding_client.embed(question)
+                    context_items = retrieve_hybrid_knowledge(self.db, question, query_embedding, self.top_k)
             else:
                 query_embedding = await self.embedding_client.embed(question)
                 context_items = retrieve_hybrid_knowledge(self.db, question, query_embedding, self.top_k)
@@ -402,7 +417,7 @@ class RAGService:
                 yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
 
             # 4. Save QA record
-            answer_text = normalize_answer_references("".join(full_answer))
+            answer_text = normalize_answer_references("".join(full_answer), has_context=bool(context_items))
             record = create_qa_record(
                 self.db,
                 question=question,

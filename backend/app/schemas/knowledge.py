@@ -68,3 +68,15 @@ class DocumentImportResponse(BaseModel):
     stored_file_path: str
     imported_count: int
     items: List[KnowledgeResponse]
+
+
+class KnowledgeCategoryStats(BaseModel):
+    category: str
+    item_count: int
+    document_count: int
+    chunk_count: int
+
+
+class KnowledgeStatsResponse(BaseModel):
+    categories: List[KnowledgeCategoryStats]
+    total_items: int

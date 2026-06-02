@@ -19,12 +19,13 @@ import {
   createKnowledge,
   deleteKnowledge,
   fetchKnowledge,
+  fetchKnowledgeStats,
   importKnowledgeDocument,
   updateKnowledge,
 } from '../api/knowledge';
 import { KnowledgeForm, categories } from '../components/KnowledgeForm';
 import { KnowledgeTable } from '../components/KnowledgeTable';
-import type { ChunkingMethod, KnowledgeItem, KnowledgePayload } from '../types';
+import type { ChunkingMethod, KnowledgeCategoryStats, KnowledgeItem, KnowledgePayload } from '../types';
 
 const chunkingOptions: { label: string; value: ChunkingMethod }[] = [
   { label: '固定长度', value: 'fixed_size' },
@@ -42,6 +43,7 @@ const chunkingMethodText: Record<string, string> = {
 
 export function KnowledgePage() {
   const [items, setItems] = useState<KnowledgeItem[]>([]);
+  const [categoryStats, setCategoryStats] = useState<KnowledgeCategoryStats[]>([]);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -54,7 +56,7 @@ export function KnowledgePage() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [messageApi, contextHolder] = message.useMessage();
 
-  const knowledgeBaseGroups = useMemo(() => buildKnowledgeBaseGroups(items), [items]);
+  const knowledgeBaseGroups = useMemo(() => buildKnowledgeBaseGroups(categoryStats, items), [categoryStats, items]);
   const selectedGroup = useMemo(
     () => knowledgeBaseGroups.find((group) => group.category === selectedCategory) ?? null,
     [knowledgeBaseGroups, selectedCategory],
@@ -67,7 +69,9 @@ export function KnowledgePage() {
   async function loadData() {
     setLoading(true);
     try {
-      setItems(await fetchKnowledge());
+      const stats = await fetchKnowledgeStats();
+      setCategoryStats(stats.categories);
+      setItems(selectedCategory ? await fetchKnowledge(selectedCategory, 1000) : []);
     } catch (error) {
       messageApi.error('知识库加载失败，请确认后端服务已启动。');
     } finally {
@@ -77,7 +81,7 @@ export function KnowledgePage() {
 
   useEffect(() => {
     void loadData();
-  }, []);
+  }, [selectedCategory]);
 
   function openCreate() {
     setEditing(null);
@@ -245,7 +249,11 @@ function KnowledgeBaseList({ groups, loading, onSelect }: KnowledgeBaseListProps
             </div>
             <div className="knowledge-base-card-stats">
               <span>
-                <strong>{group.documents.length}</strong>
+                <strong>{group.itemCount}</strong>
+                <small>条目</small>
+              </span>
+              <span>
+                <strong>{group.documentCount}</strong>
                 <small>文档</small>
               </span>
               <span>
@@ -308,7 +316,11 @@ function KnowledgeBaseDetail({
         </div>
         <div className="knowledge-base-summary-stats">
           <span>
-            <strong>{group.documents.length}</strong>
+            <strong>{group.itemCount}</strong>
+            <small>条目</small>
+          </span>
+          <span>
+            <strong>{group.documentCount}</strong>
             <small>文档</small>
           </span>
           <span>
@@ -389,7 +401,7 @@ function KnowledgeBaseDetail({
 
       <Card className="chunk-browser" title={`${group.category} 的文档切片`}>
         {group.documents.length === 0 ? (
-          <Empty description="该知识库还没有文档。请先在上方上传 PDF、Word 或 Markdown。" />
+          <Empty description="该知识库还没有上传文档。内置知识条目可在下方表格查看。" />
         ) : (
           <Collapse
             items={group.documents.map((document) => ({
@@ -467,19 +479,27 @@ interface DocumentGroup {
 
 interface KnowledgeBaseGroup {
   category: string;
+  itemCount: number;
+  documentCount: number;
   documents: DocumentGroup[];
   chunkCount: number;
 }
 
-function buildKnowledgeBaseGroups(items: KnowledgeItem[]): KnowledgeBaseGroup[] {
+function buildKnowledgeBaseGroups(
+  stats: KnowledgeCategoryStats[],
+  selectedItems: KnowledgeItem[],
+): KnowledgeBaseGroup[] {
   const categoryMap = new Map<string, Map<string, KnowledgeItem[]>>();
   for (const category of categories) {
     categoryMap.set(category, new Map());
   }
 
-  for (const item of items) {
+  for (const item of selectedItems) {
+    if (!item.document_name) {
+      continue;
+    }
     const category = item.category || '未分类';
-    const documentName = item.document_name || item.source || '手工录入';
+    const documentName = item.document_name;
     if (!categoryMap.has(category)) {
       categoryMap.set(category, new Map());
     }
@@ -491,13 +511,17 @@ function buildKnowledgeBaseGroups(items: KnowledgeItem[]): KnowledgeBaseGroup[] 
   }
 
   const categoryOrder = new Map(categories.map((category, index) => [category, index]));
-  return Array.from(categoryMap.entries())
-    .sort(([left], [right]) => {
+  const statMap = new Map(stats.map((stat) => [stat.category, stat]));
+  const allCategories = new Set([...categories, ...stats.map((stat) => stat.category)]);
+  return Array.from(allCategories)
+    .sort((left, right) => {
       const leftOrder = categoryOrder.get(left) ?? Number.MAX_SAFE_INTEGER;
       const rightOrder = categoryOrder.get(right) ?? Number.MAX_SAFE_INTEGER;
       return leftOrder - rightOrder || left.localeCompare(right, 'zh-CN');
     })
-    .map(([categoryName, documentMap]) => {
+    .map((categoryName) => {
+      const documentMap = categoryMap.get(categoryName) ?? new Map<string, KnowledgeItem[]>();
+      const stat = statMap.get(categoryName);
       const documents = Array.from(documentMap.entries())
         .sort(([left], [right]) => left.localeCompare(right, 'zh-CN'))
         .map(([documentName, documentItems]) => {
@@ -513,8 +537,10 @@ function buildKnowledgeBaseGroups(items: KnowledgeItem[]): KnowledgeBaseGroup[] 
         });
       return {
         category: categoryName,
+        itemCount: stat?.item_count ?? selectedItems.filter((item) => item.category === categoryName).length,
+        documentCount: stat?.document_count ?? documents.length,
         documents,
-        chunkCount: documents.reduce((sum, document) => sum + document.items.length, 0),
+        chunkCount: stat?.chunk_count ?? documents.reduce((sum, document) => sum + document.items.length, 0),
       };
     });
 }

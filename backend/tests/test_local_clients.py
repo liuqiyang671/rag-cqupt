@@ -1,5 +1,6 @@
 import asyncio
 
+import httpx
 import pytest
 
 from app.core.ai_errors import EmbeddingProviderError, ModelProviderError

@@ -144,8 +144,8 @@ export function ChatPage() {
         currentSessionId={sessionId}
       />
       <section className="workspace-panel">
-        <Space direction="vertical" size={18} className="full-width">
-          <div className="page-heading">
+        <Space direction="vertical" size={12} className="full-width">
+          <div className="page-heading chat-page-heading">
             <div>
               <Typography.Title level={2}>高校校园服务智能问答系统</Typography.Title>
               <Typography.Text type="secondary">先检索校园知识库，再生成可追溯回答。</Typography.Text>

@@ -1,10 +1,21 @@
 import { apiClient } from './client';
-import type { KnowledgeImportOptions, KnowledgeImportResponse, KnowledgeItem, KnowledgePayload } from '../types';
+import type {
+  KnowledgeImportOptions,
+  KnowledgeImportResponse,
+  KnowledgeItem,
+  KnowledgePayload,
+  KnowledgeStatsResponse,
+} from '../types';
 
-export async function fetchKnowledge(category?: string): Promise<KnowledgeItem[]> {
+export async function fetchKnowledge(category?: string, limit = 1000): Promise<KnowledgeItem[]> {
   const response = await apiClient.get<KnowledgeItem[]>('/knowledge', {
-    params: category ? { category } : undefined,
+    params: { ...(category ? { category } : {}), limit },
   });
+  return response.data;
+}
+
+export async function fetchKnowledgeStats(): Promise<KnowledgeStatsResponse> {
+  const response = await apiClient.get<KnowledgeStatsResponse>('/knowledge/stats');
   return response.data;
 }
 

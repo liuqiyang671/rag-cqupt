@@ -394,10 +394,10 @@ EMBEDDING_PROVIDER=mock
 ```bash
 cd backend
 python -m app.scripts.init_db
-python -m app.scripts.seed_knowledge
+python -m app.scripts.load_complete_rag_data --reset-knowledge
 ```
 
-这会创建所有数据库表、启用 pgvector 扩展、并导入 90 条校园服务种子数据。
+这会创建所有数据库表、启用 pgvector 扩展、并导入 900 条校园服务知识（9 个分类，每类 100 条）。`--reset-knowledge` 只重建知识库，不会清空用户、会话和问答历史。
 
 ### 第五步：启动后端
 
@@ -550,11 +550,12 @@ backend/
         fault_tolerant_client.py  # 自动故障转移
     scripts/                 # 初始化脚本
       init_db.py             #   建表 + pgvector 扩展
-      seed_knowledge.py      #   导入 90 条种子数据
+      load_complete_rag_data.py  # 导入 900 条完整 RAG 知识
+      seed_knowledge.py      #   导入内置知识数据
       reset_campus_data.py   #   清空并重建数据
       rebuild_knowledge_embeddings.py  # 重建向量
     data/
-      campus_seed.py         #   90 条校园服务知识 (9 分类)
+      campus_seed.py         #   900 条校园服务知识 (9 分类，每类 100 条)
   tests/                     # 测试
   uploads/                   # 上传文件存储
 frontend/

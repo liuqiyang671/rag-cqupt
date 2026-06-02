@@ -29,6 +29,7 @@ def test_detect_query_category_prefers_campus_card_and_repair_intents():
     assert detect_query_category("校园卡丢了怎么办？") == "校园卡服务"
     assert detect_query_category("图书馆座位怎么预约？") == "图书馆服务"
     assert detect_query_category("宿舍漏水要怎么报修？") == "后勤报修"
+    assert detect_query_category("宿舍严重漏水应该找谁？") == "后勤报修"
 
 
 def test_keyword_score_uses_expanded_terms_for_common_student_language():

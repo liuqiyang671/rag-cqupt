@@ -98,6 +98,8 @@ def test_rag_service_uses_existing_session_summary_and_recent_three_turns(tmp_pa
             llm_client=llm_client,
             model_provider="local",
             top_k=3,
+            enable_query_rewriting=False,
+            enable_query_decomposition=False,
         )
 
         result = asyncio.run(service.ask("我现在要怎么续借？", session_id=session.id))

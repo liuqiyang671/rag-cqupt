@@ -29,7 +29,7 @@ export function ChatBox({ loading, onSend }: ChatBoxProps) {
             void handleSend();
           }
         }}
-        rows={2}
+        autoSize={{ minRows: 1, maxRows: 3 }}
         placeholder="输入校园服务问题，例如：校园卡怎么挂失？"
       />
       <Space className="chat-box-actions">

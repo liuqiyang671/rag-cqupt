@@ -6,6 +6,9 @@ export function normalizeReferenceSection(answer: string): string {
 
   const prefix = answer.slice(0, match.index).trimEnd();
   const suffix = answer.slice(match.index).trimStart();
+  if (/^引用来源[:：]\s*$/.test(suffix)) {
+    return prefix;
+  }
   if (!prefix) {
     return suffix;
   }

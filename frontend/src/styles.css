@@ -43,33 +43,38 @@ body {
 .brand {
   display: block;
   width: 100%;
-  padding-bottom: 22px;
+  padding-bottom: 20px;
   border-bottom: 1px solid rgba(20, 116, 95, 0.12);
 }
 
 .brand-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
   min-width: 0;
 }
 
-.brand h4,
 .brand .ant-typography {
   margin: 0;
 }
 
-.brand h4.ant-typography {
+.brand-title.ant-typography {
   color: #14231f;
-  font-size: 18px;
-  line-height: 1.25;
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.35;
   white-space: nowrap;
+  word-break: keep-all;
 }
 
-.brand .ant-typography-secondary {
+.brand-subtitle.ant-typography {
   display: block;
-  margin-top: 7px;
   color: #59716a;
   font-size: 12px;
+  line-height: 1.35;
   letter-spacing: 0;
   white-space: nowrap;
+  word-break: keep-all;
 }
 
 .main-nav {
@@ -353,15 +358,24 @@ body {
 
 .chat-box {
   display: grid;
-  gap: 10px;
-  padding: 14px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
   background: #f8fbf8;
   border: 1px solid rgba(20, 116, 95, 0.16);
   border-radius: 8px;
 }
 
 .chat-box textarea {
+  min-height: 34px !important;
   resize: none;
+}
+
+.chat-box .chat-box-actions {
+  width: auto;
+  align-items: center;
+  white-space: nowrap;
 }
 
 .chat-box-actions,
@@ -410,19 +424,22 @@ body {
 
 .knowledge-base-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: 14px;
 }
 
 .knowledge-base-card {
   border-color: rgba(20, 116, 95, 0.14);
   border-radius: 8px;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .knowledge-base-card .ant-card-body {
   display: grid;
   gap: 14px;
   min-height: 150px;
+  min-width: 0;
 }
 
 .knowledge-base-card-header {
@@ -431,17 +448,32 @@ body {
   gap: 8px;
 }
 
-.knowledge-base-card-stats,
+.knowledge-base-card-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  min-width: 0;
+}
+
 .knowledge-base-summary-stats {
   display: flex;
   gap: 12px;
 }
 
-.knowledge-base-card-stats span,
 .knowledge-base-summary-stats span {
   display: grid;
   min-width: 72px;
   padding: 10px 12px;
+  background: #f4faf6;
+  border: 1px solid rgba(20, 116, 95, 0.12);
+  border-radius: 8px;
+}
+
+.knowledge-base-card-stats span {
+  display: grid;
+  min-width: 0;
+  width: 100%;
+  padding: 10px 8px;
   background: #f4faf6;
   border: 1px solid rgba(20, 116, 95, 0.12);
   border-radius: 8px;
@@ -564,12 +596,12 @@ body {
     border-bottom: 0;
   }
 
-  .brand h4.ant-typography {
+  .brand-title.ant-typography {
     font-size: 16px;
     white-space: normal;
   }
 
-  .brand .ant-typography-secondary {
+  .brand-subtitle.ant-typography {
     display: none;
   }
 
@@ -627,6 +659,14 @@ body {
 @media (max-width: 620px) {
   .workspace-panel {
     padding: 16px;
+  }
+
+  .chat-box {
+    grid-template-columns: 1fr;
+  }
+
+  .chat-box .chat-box-actions {
+    width: 100%;
   }
 
   .message-list {
@@ -782,6 +822,15 @@ body {
 
 .chat-page .workspace-panel > .full-width > .ant-space-item {
   flex: 0 0 auto;
+}
+
+.chat-page-heading {
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.chat-page .ant-alert {
+  padding: 8px 12px;
 }
 
 .chat-page .workspace-panel > .full-width > .ant-space-item:nth-child(3) {

@@ -10,6 +10,7 @@ from app.schemas.knowledge import (
     DocumentImportResponse,
     KnowledgeCreate,
     KnowledgeResponse,
+    KnowledgeStatsResponse,
     KnowledgeUpdate,
 )
 from app.services.document_import_service import import_document_to_knowledge
@@ -18,6 +19,7 @@ from app.services.knowledge_service import (
     create_knowledge,
     delete_knowledge,
     get_knowledge,
+    get_knowledge_category_stats,
     list_knowledge,
     update_knowledge,
 )
@@ -34,6 +36,11 @@ def list_items(
     db: Session = Depends(get_db),
 ) -> list:
     return list_knowledge(db, category=category, skip=skip, limit=limit)
+
+
+@router.get("/stats", response_model=KnowledgeStatsResponse)
+def get_stats(db: Session = Depends(get_db)) -> dict:
+    return get_knowledge_category_stats(db)
 
 
 @router.post("", response_model=KnowledgeResponse, status_code=status.HTTP_201_CREATED)

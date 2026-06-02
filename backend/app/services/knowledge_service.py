@@ -1,8 +1,9 @@
 from typing import List, Optional
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.data.campus_seed import CAMPUS_KNOWLEDGE_CATEGORIES
 from app.models.knowledge import KnowledgeBase
 from app.schemas.knowledge import KnowledgeCreate, KnowledgeUpdate
 from app.services.embedding.base import EmbeddingClient
@@ -43,6 +44,40 @@ def list_knowledge(
         statement = statement.where(KnowledgeBase.category == category)
     statement = statement.order_by(KnowledgeBase.updated_at.desc()).offset(skip).limit(limit)
     return list(db.scalars(statement).all())
+
+
+def get_knowledge_category_stats(db: Session) -> dict:
+    item_rows = db.execute(
+        select(KnowledgeBase.category, func.count(KnowledgeBase.id)).group_by(KnowledgeBase.category)
+    ).all()
+    document_rows = db.execute(
+        select(KnowledgeBase.category, func.count(func.distinct(KnowledgeBase.document_name)))
+        .where(KnowledgeBase.document_name.is_not(None))
+        .group_by(KnowledgeBase.category)
+    ).all()
+    chunk_rows = db.execute(
+        select(KnowledgeBase.category, func.count(KnowledgeBase.id))
+        .where(KnowledgeBase.document_name.is_not(None))
+        .group_by(KnowledgeBase.category)
+    ).all()
+
+    item_counts = {category: count for category, count in item_rows}
+    document_counts = {category: count for category, count in document_rows}
+    chunk_counts = {category: count for category, count in chunk_rows}
+    known_categories = set(CAMPUS_KNOWLEDGE_CATEGORIES)
+    known_categories.update(item_counts)
+
+    category_order = {category: index for index, category in enumerate(CAMPUS_KNOWLEDGE_CATEGORIES)}
+    categories = [
+        {
+            "category": category,
+            "item_count": item_counts.get(category, 0),
+            "document_count": document_counts.get(category, 0),
+            "chunk_count": chunk_counts.get(category, 0),
+        }
+        for category in sorted(known_categories, key=lambda value: (category_order.get(value, 10_000), value))
+    ]
+    return {"categories": categories, "total_items": sum(item_counts.values())}
 
 
 def get_knowledge(db: Session, knowledge_id: int) -> Optional[KnowledgeBase]:
