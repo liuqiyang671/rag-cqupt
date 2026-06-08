@@ -110,6 +110,7 @@ def train(cfg: dict, dry_run: bool = True) -> None:
         warmup_ratio=train_cfg.get("warmup_ratio", 0.1),
         logging_steps=train_cfg.get("logging_steps", 10),
         save_steps=train_cfg.get("save_steps", 100),
+        save_strategy=train_cfg.get("save_strategy", "no"),
         bf16=True,
         fp16=False,
         optim="adamw_8bit",
